@@ -1,0 +1,14 @@
+.env
+vendor/
+cache/
+log/
+# Claude / Anthropic
+.claude/
+claude_session/
+claude_history/
+*.claude.md
+.anthropic/
+
+# Archivos de configuración de IA (opcional)
+.cursorrules
+.aichat/

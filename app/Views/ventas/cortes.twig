@@ -1,0 +1,117 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Historial de cortes</h1>
+            <p class="sz-dash-sub">{{ total }} corte{{ total != 1 ? 's' : '' }} registrado{{ total != 1 ? 's' : '' }}</p>
+        </div>
+        <a href="{{ 'corte-caja'|url }}" class="btn btn-sz btn-sm">
+            <i class="fas fa-cash-register mr-1"></i> Nuevo corte
+        </a>
+    </div>
+
+    <div class="sz-dash-card animate-in" style="--delay:.05s">
+
+        {% if datos|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Fecha y hora</th>
+                        <th>Cajero</th>
+                        <th class="text-center">Ventas</th>
+                        <th class="text-right">Total ventas</th>
+                        <th class="text-right">Efectivo sistema</th>
+                        <th class="text-right">Efectivo contado</th>
+                        <th class="text-right">Diferencia</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for corte in datos %}
+                    <tr>
+                        <td><code class="sz-codigo">{{ corte.id|format_number }}</code></td>
+                        <td>
+                            <span class="sz-prod-nombre">{{ corte.created_at|date("d/m/Y") }}</span>
+                            <small class="sz-prod-desc">{{ corte.created_at|date("H:i") }}</small>
+                        </td>
+                        <td>{{ corte.usuario.nombre ?? '—' }} {{ corte.usuario.apellido ?? '' }}</td>
+                        <td class="text-center">
+                            <span class="sz-stock-badge sz-badge--ok">{{ corte.num_ventas }}</span>
+                        </td>
+                        <td class="text-right">
+                            <strong>{{ _cfg.simbolo }}{{ corte.total_ventas|number_format(2, '.', ',') }}</strong>
+                        </td>
+                        <td class="text-right">
+                            {{ _cfg.simbolo }}{{ corte.efectivo_esperado|number_format(2, '.', ',') }}
+                        </td>
+                        <td class="text-right">
+                            {{ _cfg.simbolo }}{{ corte.efectivo_contado|number_format(2, '.', ',') }}
+                        </td>
+                        <td class="text-right">
+                            {% if corte.diferencia == 0 %}
+                                <span class="text-success font-weight-bold">
+                                    <i class="fas fa-check mr-1"></i>Cuadra
+                                </span>
+                            {% elseif corte.diferencia > 0 %}
+                                <span class="text-warning font-weight-bold">
+                                    +{{ _cfg.simbolo }}{{ corte.diferencia|number_format(2, '.', ',') }}
+                                </span>
+                            {% else %}
+                                <span class="text-danger font-weight-bold">
+                                    -{{ _cfg.simbolo }}{{ (corte.diferencia * -1)|number_format(2, '.', ',') }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ ('corte-caja/detalle/' ~ corte.id)|url }}"
+                               class="btn btn-sm btn-outline-secondary" title="Ver detalle">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# Paginación #}
+        {% if total_pages > 1 %}
+        <div class="sz-paginacion">
+            {% if pagina > 1 %}
+            <a href="{{ 'corte-caja/historial'|url }}?pagina={{ pagina - 1 }}" class="sz-page-btn">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            {% for i in 1..total_pages %}
+                {% if i == pagina %}
+                    <span class="sz-page-btn sz-page-btn--active">{{ i }}</span>
+                {% elseif i == 1 or i == total_pages or (i >= pagina - 2 and i <= pagina + 2) %}
+                    <a href="{{ 'corte-caja/historial'|url }}?pagina={{ i }}" class="sz-page-btn">{{ i }}</a>
+                {% elseif i == pagina - 3 or i == pagina + 3 %}
+                    <span class="sz-page-dots">…</span>
+                {% endif %}
+            {% endfor %}
+            {% if pagina < total_pages %}
+            <a href="{{ 'corte-caja/historial'|url }}?pagina={{ pagina + 1 }}" class="sz-page-btn">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="sz-empty" style="padding:3rem">
+            <i class="fas fa-cash-register fa-2x mb-3 d-block" style="color:var(--sz-border)"></i>
+            Aún no se han registrado cortes de caja.
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+{% endblock %}

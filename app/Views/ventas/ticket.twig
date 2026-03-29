@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket #{{ venta.id|padLeft(5) }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            width: 80mm;
+            margin: 0 auto;
+            padding: 8px;
+            color: #000;
+        }
+        .center  { text-align: center; }
+        .right   { text-align: right; }
+        .bold    { font-weight: bold; }
+        .sep     { border-top: 1px dashed #000; margin: 6px 0; }
+        .logo    { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
+        .row     { display: flex; justify-content: space-between; margin: 2px 0; }
+        .total   { font-size: 15px; font-weight: bold; }
+        @media print {
+            body { width: 80mm; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="center">
+    <div class="logo">{{ _cfg.negocio_nombre }}</div>
+    <div>Sistema de gestión</div>
+    <div>Tel: {{ _cfg.negocio_tel }}</div>
+    <div>Tel: (000) 000-0000</div>
+</div>
+
+<div class="sep"></div>
+
+<div class="row"><span>Folio:</span><span class="bold">#{{ venta.id|padLeft(5) }}</span></div>
+<div class="row"><span>Fecha:</span><span>{{ venta.created_at|date('d/m/Y H:i') }}</span></div>
+<div class="row"><span>Cajero:</span><span>{{ venta.usuario.nombre ?? '—' }}</span></div>
+{% if venta.cliente %}
+<div class="row"><span>Cliente:</span><span>{{ venta.cliente.nombre }} {{ venta.cliente.apellido }}</span></div>
+{% endif %}
+
+<div class="sep"></div>
+
+<div class="row bold">
+    <span>Producto</span>
+    <span>Importe</span>
+</div>
+<div class="sep"></div>
+
+{% for detalle in venta.detalles %}
+<div>{{ detalle.producto.nombre }}</div>
+<div class="row">
+    <span>  {{ detalle.cantidad }} x ${{ detalle.precio_unitario|number_format(2, '.', ',') }}</span>
+    <span>{{ _cfg.simbolo }}{{ detalle.subtotal|number_format(2, '.', ',') }}</span>
+</div>
+{% endfor %}
+
+<div class="sep"></div>
+
+<div class="row total">
+    <span>TOTAL</span>
+    <span>{{ _cfg.simbolo }}{{ venta.total|number_format(2, '.', ',') }}</span>
+</div>
+<div class="row">
+    <span>Forma de pago</span>
+    <span>{{ venta.tipo|capitalize }}</span>
+</div>
+
+<div class="sep"></div>
+
+<div class="center">
+    <div>{{ _cfg.ticket_mensaje }}</div>
+    <div style="margin-top:4px;font-size:10px">Conserve su ticket</div>
+</div>
+
+<br>
+<div class="center no-print">
+    <button onclick="window.print()" style="padding:8px 20px;cursor:pointer;margin-right:8px">
+        Imprimir
+    </button>
+    <button onclick="window.close()" style="padding:8px 20px;cursor:pointer">
+        Cerrar
+    </button>
+</div>
+
+<script>
+    // Auto-imprimir al abrir
+    window.onload = function() { window.print(); }
+</script>
+</body>
+</html>

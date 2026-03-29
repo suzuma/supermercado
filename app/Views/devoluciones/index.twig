@@ -1,0 +1,271 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Nueva devolución</h1>
+            <p class="sz-dash-sub">Busca una venta por folio para procesar la devolución</p>
+        </div>
+        <a href="{{ 'devoluciones/historial'|url }}" class="btn btn-outline-secondary">
+            <i class="fas fa-history mr-2"></i> Historial
+        </a>
+    </div>
+
+    {# Buscador de venta #}
+    <div class="sz-dash-card animate-in mb-3" style="--delay:.05s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-search"></i> Buscar venta</span>
+        </div>
+        <div class="p-4">
+            <div class="input-group" style="max-width:360px">
+                <input type="number" id="inputFolio" class="form-control" placeholder="Folio (ej. 42)" min="1">
+                <div class="input-group-append">
+                    <button class="btn btn-sz" id="btnBuscar">
+                        <i class="fas fa-search mr-1"></i> Buscar
+                    </button>
+                </div>
+            </div>
+            <div id="alertaBusqueda" class="mt-2" style="display:none"></div>
+        </div>
+    </div>
+
+    {# Panel resultado — se muestra tras la búsqueda #}
+    <div id="panelVenta" style="display:none">
+
+        <div class="sz-dash-card animate-in mb-3">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-receipt"></i> Venta <span id="lblFolio"></span></span>
+                <div>
+                    <span id="lblFecha" class="text-muted mr-3" style="font-size:.85rem"></span>
+                    <span class="text-muted mr-1" style="font-size:.85rem">Total original:</span>
+                    <strong id="lblTotal"></strong>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width:40px"></th>
+                            <th>Producto</th>
+                            <th class="text-center">Vendido</th>
+                            <th class="text-center">Disponible</th>
+                            <th class="text-center" style="width:130px">A devolver</th>
+                            <th class="text-right">Precio unit.</th>
+                            <th class="text-right">Reembolso</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyItems"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="sz-dash-card animate-in">
+            <div class="p-4">
+                <div class="row align-items-end">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label class="sz-label">Motivo <span class="text-muted">(opcional)</span></label>
+                        <input type="text" id="inputMotivo" class="form-control"
+                               placeholder="Producto dañado, error en cobro, etc." maxlength="255">
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <div class="mb-2">
+                            Total a reembolsar:
+                            <strong id="lblTotalDevolver" style="font-size:1.3rem;color:var(--sz-primary)">
+                                {{ _cfg.simbolo }}0.00
+                            </strong>
+                        </div>
+                        <button class="btn btn-danger" id="btnConfirmar" disabled>
+                            <i class="fas fa-undo mr-1"></i> Registrar devolución
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    const SIMBOLO = '{{ _cfg.simbolo }}';
+    let ventaId = null;
+
+    // ── Buscar venta ──────────────────────────────────────────
+    function buscarVenta() {
+        const folio = parseInt($('#inputFolio').val());
+        if (!folio || folio <= 0) return;
+
+        $('#btnBuscar').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url:      base_url('devoluciones/buscarVenta'),
+            method:   'POST',
+            data:     { venta_id: folio },
+            dataType: 'json',
+            success: function (res) {
+                const alerta = $('#alertaBusqueda');
+                if (res.response) {
+                    alerta.hide();
+                    renderVenta(res.result);
+                } else {
+                    alerta.html('<div class="alert alert-warning py-2 mb-0">' + res.message + '</div>').show();
+                    $('#panelVenta').hide();
+                    ventaId = null;
+                }
+            },
+            complete: function () {
+                $('#btnBuscar').prop('disabled', false).html('<i class="fas fa-search mr-1"></i> Buscar');
+            }
+        });
+    }
+
+    $('#btnBuscar').on('click', buscarVenta);
+    $('#inputFolio').on('keypress', function (e) { if (e.which === 13) buscarVenta(); });
+
+    // ── Render artículos de la venta ──────────────────────────
+    function renderVenta(venta) {
+        ventaId = venta.id;
+        $('#lblFolio').text('#' + String(venta.id).padStart(5, '0'));
+        $('#lblTotal').text(SIMBOLO + fmtNum(venta.total));
+
+        const fecha = new Date(venta.created_at.replace(' ', 'T'));
+        $('#lblFecha').text(fecha.toLocaleDateString('es-MX', { dateStyle: 'medium' }) +
+                            ' ' + fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
+
+        let html = '';
+        venta.detalles.forEach(function (d) {
+            const disponible = Math.max(0, parseFloat(d.cantidad) - parseFloat(d.cantidad_devuelta || 0));
+            const esGramaje  = parseFloat(d.cantidad) % 1 !== 0;
+            const nombre     = d.producto ? d.producto.nombre : '—';
+
+            if (disponible <= 0) {
+                html += `
+                <tr class="text-muted">
+                    <td><input type="checkbox" disabled></td>
+                    <td>${nombre}</td>
+                    <td class="text-center">${fmtCant(d.cantidad)}</td>
+                    <td class="text-center"><span class="sz-stock-badge sz-badge--danger">Ya devuelto</span></td>
+                    <td></td>
+                    <td class="text-right">${SIMBOLO}${fmtNum(d.precio_unitario)}</td>
+                    <td class="text-right">—</td>
+                </tr>`;
+                return;
+            }
+
+            html += `
+            <tr>
+                <td>
+                    <input type="checkbox" class="chk-item"
+                           data-id="${d.id}"
+                           data-precio="${d.precio_unitario}"
+                           data-max="${disponible}"
+                           data-gramaje="${esGramaje ? 1 : 0}">
+                </td>
+                <td>${nombre}</td>
+                <td class="text-center">${fmtCant(d.cantidad)}</td>
+                <td class="text-center">${fmtCant(disponible)}</td>
+                <td class="text-center">
+                    <input type="number" class="form-control form-control-sm input-cant text-center"
+                           data-id="${d.id}"
+                           min="${esGramaje ? '0.001' : '1'}"
+                           max="${disponible}"
+                           step="${esGramaje ? '0.001' : '1'}"
+                           value="${fmtCant(disponible)}"
+                           disabled
+                           style="width:90px;margin:0 auto">
+                </td>
+                <td class="text-right">${SIMBOLO}${fmtNum(d.precio_unitario)}</td>
+                <td class="text-right subtotal-item" data-id="${d.id}">—</td>
+            </tr>`;
+        });
+
+        $('#tbodyItems').html(html);
+        $('#panelVenta').show();
+        recalcular();
+    }
+
+    // ── Activar / desactivar fila ─────────────────────────────
+    $(document).on('change', '.chk-item', function () {
+        const id      = $(this).data('id');
+        const checked = $(this).is(':checked');
+        $(`.input-cant[data-id="${id}"]`).prop('disabled', !checked);
+        if (!checked) $(`.subtotal-item[data-id="${id}"]`).text('—');
+        recalcular();
+    });
+
+    $(document).on('input', '.input-cant', function () {
+        const max = parseFloat($(this).attr('max'));
+        let val   = parseFloat($(this).val());
+        if (isNaN(val) || val <= 0) { $(this).val(''); }
+        else if (val > max)         { $(this).val(max); }
+        recalcular();
+    });
+
+    // ── Recalcular total a reembolsar ─────────────────────────
+    function recalcular() {
+        let total = 0;
+
+        $('.chk-item:checked').each(function () {
+            const id     = $(this).data('id');
+            const precio = parseFloat($(this).data('precio'));
+            const cant   = parseFloat($(`.input-cant[data-id="${id}"]`).val()) || 0;
+            const sub    = cant * precio;
+            total += sub;
+            $(`.subtotal-item[data-id="${id}"]`).text(SIMBOLO + fmtNum(sub));
+        });
+
+        $('#lblTotalDevolver').text(SIMBOLO + fmtNum(total));
+        $('#btnConfirmar').prop('disabled', total <= 0);
+    }
+
+    // ── Registrar devolución ──────────────────────────────────
+    $('#btnConfirmar').on('click', function () {
+        const items = [];
+
+        $('.chk-item:checked').each(function () {
+            const id   = $(this).data('id');
+            const cant = parseFloat($(`.input-cant[data-id="${id}"]`).val());
+            if (cant > 0) items.push({ venta_detalle_id: id, cantidad: cant });
+        });
+
+        if (!items.length) return;
+
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Procesando...');
+
+        $.ajax({
+            url:      base_url('devoluciones/registrar'),
+            method:   'POST',
+            data:     {
+                venta_id: ventaId,
+                motivo:   $('#inputMotivo').val(),
+                items:    JSON.stringify(items)
+            },
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    window.location.href = base_url('devoluciones/recibo/' + res.result.devolucion_id);
+                } else {
+                    alert(res.message);
+                    $('#btnConfirmar').prop('disabled', false)
+                        .html('<i class="fas fa-undo mr-1"></i> Registrar devolución');
+                }
+            },
+            error: function () {
+                alert('Error de conexión. Intenta de nuevo.');
+                $('#btnConfirmar').prop('disabled', false)
+                    .html('<i class="fas fa-undo mr-1"></i> Registrar devolución');
+            }
+        });
+    });
+
+    // ── Utilidades ────────────────────────────────────────────
+    function fmtNum(n)  { return parseFloat(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function fmtCant(n) { const f = parseFloat(n); return f % 1 === 0 ? f.toFixed(0) : f.toFixed(3).replace(/\.?0+$/, ''); }
+});
+</script>
+{% endblock %}

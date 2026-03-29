@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+    body { font-family: Arial, sans-serif; font-size: 10px; color: #0f1a0d; margin: 0; padding: 16px; }
+    .header { border-bottom: 2px solid #1a6b2f; padding-bottom: 8px; margin-bottom: 12px; }
+    .logo { font-size: 16px; font-weight: bold; color: #1a6b2f; }
+    .logo span { color: #e85d04; }
+    .titulo { font-size: 12px; font-weight: bold; color: #1a6b2f; margin-bottom: 10px; border-left: 3px solid #1a6b2f; padding-left: 6px; }
+    .resumen { display: flex; gap: 10px; margin-bottom: 12px; }
+    .res-item { flex: 1; background: #f5f7f4; border-radius: 4px; padding: 6px 10px; }
+    .res-label { font-size: 8px; text-transform: uppercase; color: #6b7a6d; }
+    .res-valor { font-size: 13px; font-weight: bold; color: #1a6b2f; }
+    table { width: 100%; border-collapse: collapse; font-size: 9px; }
+    th { background: #1a6b2f; color: #fff; font-size: 8px; text-transform: uppercase; padding: 4px 5px; text-align: left; }
+    td { padding: 4px 5px; border-bottom: 1px solid #dae3db; }
+    tr:nth-child(even) td { background: #f8faf8; }
+    .text-right  { text-align: right; }
+    .text-center { text-align: center; }
+    .badge { display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 8px; font-weight: bold; }
+    .badge-ok     { background: #f0faf6; color: #2d9e3a; }
+    .badge-warn   { background: #fdf8ec; color: #b7820a; }
+    .badge-danger { background: #fdf2f2; color: #c0392b; }
+    .footer { margin-top: 16px; border-top: 1px solid #dae3db; padding-top: 6px; font-size: 8px; color: #6b7a6d; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">Supermercado<span>Web</span></div>
+    <div style="font-size:9px;color:#6b7a6d">Reporte de inventario — {{ fecha }}</div>
+</div>
+
+<div class="titulo">Estado del inventario</div>
+
+<div class="resumen">
+    <div class="res-item">
+        <div class="res-label">Total productos</div>
+        <div class="res-valor">{{ inventario.total }}</div>
+    </div>
+    <div class="res-item">
+        <div class="res-label">Valor en inventario</div>
+        <div class="res-valor">${{ inventario.valor_total|number_format(2, '.', ',') }}</div>
+    </div>
+    <div class="res-item">
+        <div class="res-label">Stock bajo</div>
+        <div class="res-valor" style="color:#b7820a">{{ inventario.stock_bajo }}</div>
+    </div>
+    <div class="res-item">
+        <div class="res-label">Agotados</div>
+        <div class="res-valor" style="color:#c0392b">{{ inventario.agotados }}</div>
+    </div>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Proveedor</th>
+            <th class="text-right">P. Compra</th>
+            <th class="text-right">P. Venta</th>
+            <th class="text-right">Margen</th>
+            <th class="text-center">Stock</th>
+            <th class="text-center">Mín.</th>
+            <th class="text-center">Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in inventario.productos %}
+        <tr>
+            <td>{{ p.nombre }}</td>
+            <td>{{ p.categoria }}</td>
+            <td>{{ p.proveedor ?? '—' }}</td>
+            <td class="text-right">${{ p.precio_compra|number_format(2, '.', ',') }}</td>
+            <td class="text-right">${{ p.precio_venta|number_format(2, '.', ',') }}</td>
+            <td class="text-right">${{ p.margen|number_format(2, '.', ',') }}</td>
+            <td class="text-center">{{ p.stock }}</td>
+            <td class="text-center">{{ p.stock_minimo }}</td>
+            <td class="text-center">
+                {% if p.estado_stock == 'agotado' %}
+                    <span class="badge badge-danger">Agotado</span>
+                {% elseif p.estado_stock == 'bajo' %}
+                    <span class="badge badge-warn">Bajo</span>
+                {% else %}
+                    <span class="badge badge-ok">OK</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="footer">Supermercado Web — Reporte de inventario generado automáticamente</div>
+</body>
+</html>

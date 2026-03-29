@@ -1,0 +1,310 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    {# Encabezado #}
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Reporte de utilidades</h1>
+            <p class="sz-dash-sub">
+                {{ desde|date('d/m/Y') }} — {{ hasta|date('d/m/Y') }}
+                <span class="text-muted small ml-2">
+                    (comparado con {{ desde_ant|date('d/m/Y') }} – {{ hasta_ant|date('d/m/Y') }})
+                </span>
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ ('reportes/csvUtilidades?desde=' ~ desde ~ '&hasta=' ~ hasta)|url }}"
+               class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-file-csv mr-1"></i> Exportar CSV
+            </a>
+            <a href="{{ 'reportes'|url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-chart-bar mr-1"></i> Reportes generales
+            </a>
+        </div>
+    </div>
+
+    {# Filtro de fechas #}
+    <div class="sz-filtros animate-in mb-4" style="--delay:.02s">
+        <form method="GET" action="{{ 'reportes/utilidades'|url }}" class="sz-filtros-form">
+            <div class="sz-filtro-group">
+                <label class="small text-muted mb-1 d-block">Desde</label>
+                <input type="date" name="desde" value="{{ desde }}" class="form-control form-control-sm">
+            </div>
+            <div class="sz-filtro-group">
+                <label class="small text-muted mb-1 d-block">Hasta</label>
+                <input type="date" name="hasta" value="{{ hasta }}" class="form-control form-control-sm">
+            </div>
+            <button type="submit" class="btn btn-sz btn-sm align-self-end">
+                <i class="fas fa-filter mr-1"></i> Aplicar
+            </button>
+            <div class="sz-filtro-group align-self-end">
+                <a href="{{ ('reportes/utilidades?desde=' ~ inicio_mes ~ '&hasta=' ~ hasta)|url }}"
+                   class="btn btn-outline-secondary btn-sm mr-1">Este mes</a>
+                <a href="{{ ('reportes/utilidades?desde=' ~ hace7dias ~ '&hasta=' ~ hasta)|url }}"
+                   class="btn btn-outline-secondary btn-sm">7 días</a>
+            </div>
+        </form>
+    </div>
+
+    {# ── Métricas principales ─────────────────────────────── #}
+    <div class="sz-util-metrics animate-in" style="--delay:.05s">
+
+        {# Ingresos #}
+        {% set difIngresos = total_ingresos - ingresos_ant %}
+        <div class="sz-util-card sz-util-card--ingresos">
+            <div class="sz-util-card-label">
+                <i class="fas fa-arrow-circle-up mr-1"></i> Ingresos totales
+            </div>
+            <div class="sz-util-card-valor">
+                {{ _cfg.simbolo }}{{ total_ingresos|number_format(2, '.', ',') }}
+            </div>
+            <div class="sz-util-card-comp {% if difIngresos >= 0 %}sz-comp--up{% else %}sz-comp--down{% endif %}">
+                <i class="fas fa-{{ difIngresos >= 0 ? 'arrow-up' : 'arrow-down' }} mr-1"></i>
+                {{ _cfg.simbolo }}{{ (difIngresos|abs)|number_format(2, '.', ',') }} vs período anterior
+            </div>
+        </div>
+
+        {# Costos #}
+        {% set difCostos = total_costos - costos_ant %}
+        <div class="sz-util-card sz-util-card--costos">
+            <div class="sz-util-card-label">
+                <i class="fas fa-arrow-circle-down mr-1"></i> Costo de ventas
+            </div>
+            <div class="sz-util-card-valor">
+                {{ _cfg.simbolo }}{{ total_costos|number_format(2, '.', ',') }}
+            </div>
+            <div class="sz-util-card-comp {% if difCostos <= 0 %}sz-comp--up{% else %}sz-comp--down{% endif %}">
+                <i class="fas fa-{{ difCostos <= 0 ? 'arrow-down' : 'arrow-up' }} mr-1"></i>
+                {{ _cfg.simbolo }}{{ (difCostos|abs)|number_format(2, '.', ',') }} vs período anterior
+            </div>
+        </div>
+
+        {# Utilidad bruta #}
+        {% set difUtil = total_utilidad - utilidad_ant %}
+        <div class="sz-util-card sz-util-card--utilidad">
+            <div class="sz-util-card-label">
+                <i class="fas fa-dollar-sign mr-1"></i> Utilidad bruta
+            </div>
+            <div class="sz-util-card-valor">
+                {{ _cfg.simbolo }}{{ total_utilidad|number_format(2, '.', ',') }}
+            </div>
+            <div class="sz-util-card-comp {% if difUtil >= 0 %}sz-comp--up{% else %}sz-comp--down{% endif %}">
+                <i class="fas fa-{{ difUtil >= 0 ? 'arrow-up' : 'arrow-down' }} mr-1"></i>
+                {{ _cfg.simbolo }}{{ (difUtil|abs)|number_format(2, '.', ',') }} vs período anterior
+            </div>
+        </div>
+
+        {# Margen % #}
+        {% set difMargen = margen_pct - margen_ant %}
+        <div class="sz-util-card sz-util-card--margen">
+            <div class="sz-util-card-label">
+                <i class="fas fa-percentage mr-1"></i> Margen de ganancia
+            </div>
+            <div class="sz-util-card-valor">{{ margen_pct|number_format(1, '.', ',') }}%</div>
+            <div class="sz-util-card-comp {% if difMargen >= 0 %}sz-comp--up{% else %}sz-comp--down{% endif %}">
+                <i class="fas fa-{{ difMargen >= 0 ? 'arrow-up' : 'arrow-down' }} mr-1"></i>
+                {{ (difMargen|abs)|number_format(1, '.', ',') }}pp vs período anterior
+            </div>
+        </div>
+
+    </div>
+
+    {# ── Gráfica Ingresos vs Costos por día ──────────────── #}
+    {% if por_dia|length > 0 %}
+    <div class="sz-dash-card animate-in mb-4" style="--delay:.1s">
+        <div class="sz-card-header">
+            <span class="sz-card-title">
+                <i class="fas fa-chart-bar"></i> Ingresos vs Costos por día
+            </span>
+        </div>
+        <div class="p-4" style="height:300px">
+            <canvas id="chartUtilidad"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+
+        {# ── Productos más rentables ──────────────────────── #}
+        <div class="col-lg-8 mb-4">
+            <div class="sz-dash-card animate-in h-100" style="--delay:.12s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title">
+                        <i class="fas fa-trophy"></i> Productos más rentables
+                    </span>
+                </div>
+
+                {% if productos|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Producto</th>
+                                <th class="text-center">Uds.</th>
+                                <th class="text-right">Ingresos</th>
+                                <th class="text-right">Costos</th>
+                                <th class="text-right">Utilidad</th>
+                                <th class="text-right">Margen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in productos %}
+                            <tr>
+                                <td>
+                                    {% if loop.index == 1 %}
+                                        <span class="sz-rank sz-rank--gold">1</span>
+                                    {% elseif loop.index == 2 %}
+                                        <span class="sz-rank sz-rank--silver">2</span>
+                                    {% elseif loop.index == 3 %}
+                                        <span class="sz-rank sz-rank--bronze">3</span>
+                                    {% else %}
+                                        <span class="text-muted small">{{ loop.index }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="sz-prod-nombre">{{ p.nombre }}</span>
+                                    <small class="sz-prod-desc">{{ p.categoria }}</small>
+                                </td>
+                                <td class="text-center">{{ p.unidades|number_format(0, '.', ',') }}</td>
+                                <td class="text-right">{{ _cfg.simbolo }}{{ p.ingresos|number_format(2, '.', ',') }}</td>
+                                <td class="text-right text-muted">{{ _cfg.simbolo }}{{ p.costos|number_format(2, '.', ',') }}</td>
+                                <td class="text-right">
+                                    <strong class="{{ p.utilidad >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ _cfg.simbolo }}{{ p.utilidad|number_format(2, '.', ',') }}
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <span class="sz-util-margen-badge
+                                        {% if p.margen >= 30 %}sz-margen--alto
+                                        {% elseif p.margen >= 15 %}sz-margen--medio
+                                        {% else %}sz-margen--bajo{% endif %}">
+                                        {{ p.margen|number_format(1, '.', ',') }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="sz-empty py-4">Sin ventas en el período seleccionado</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ── Utilidad por categoría ───────────────────────── #}
+        <div class="col-lg-4 mb-4">
+            <div class="sz-dash-card animate-in h-100" style="--delay:.14s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title">
+                        <i class="fas fa-layer-group"></i> Por categoría
+                    </span>
+                </div>
+
+                {% if categorias|length > 0 %}
+                <div class="p-3">
+                    {% set maxUtil = 0 %}
+                    {% for cat in categorias %}{% if cat.utilidad > maxUtil %}{% set maxUtil = cat.utilidad %}{% endif %}{% endfor %}
+                    {% for cat in categorias %}
+                    <div class="sz-util-cat-item">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="sz-prod-nombre">{{ cat.categoria }}</span>
+                            <strong class="{{ cat.utilidad >= 0 ? 'text-success' : 'text-danger' }}">
+                                {{ _cfg.simbolo }}{{ cat.utilidad|number_format(2, '.', ',') }}
+                            </strong>
+                        </div>
+                        <div class="sz-util-bar-wrap">
+                            <div class="sz-util-bar"
+                                 style="width: {{ maxUtil > 0 ? ((cat.utilidad / maxUtil) * 100)|round : 0 }}%"></div>
+                        </div>
+                        <small class="text-muted">
+                            {{ cat.margen|number_format(1, '.', ',') }}% margen ·
+                            {{ _cfg.simbolo }}{{ cat.ingresos|number_format(2, '.', ',') }} ingresos
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="sz-empty py-4">Sin datos</div>
+                {% endif %}
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+{% if por_dia|length > 0 %}
+(function () {
+    const labels   = {{ labels|json_encode|raw }};
+    const ingresos = {{ datos_ingresos|json_encode|raw }};
+    const costos   = {{ datos_costos|json_encode|raw }};
+    const utilidad = {{ datos_utilidad|json_encode|raw }};
+
+    const ctx = document.getElementById('chartUtilidad').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label:           'Ingresos',
+                    data:            ingresos,
+                    backgroundColor: 'rgba(26,107,47,.75)',
+                    borderRadius:    4,
+                    order:           2,
+                },
+                {
+                    label:           'Costos',
+                    data:            costos,
+                    backgroundColor: 'rgba(232,93,4,.65)',
+                    borderRadius:    4,
+                    order:           2,
+                },
+                {
+                    label:           'Utilidad',
+                    data:            utilidad,
+                    type:            'line',
+                    borderColor:     '#2563eb',
+                    backgroundColor: 'rgba(37,99,235,.1)',
+                    borderWidth:     2,
+                    pointRadius:     3,
+                    tension:         0.3,
+                    fill:            true,
+                    order:           1,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ' ' + _SIMBOLO_ + parseFloat(ctx.raw).toLocaleString('es-MX', { minimumFractionDigits: 2 }),
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: v => _SIMBOLO_ + v.toLocaleString('es-MX'),
+                    }
+                }
+            }
+        }
+    });
+})();
+{% endif %}
+</script>
+{% endblock %}

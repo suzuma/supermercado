@@ -1,0 +1,404 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">{{ title }}</h1>
+            <p class="sz-dash-sub">
+                <a href="{{ 'inventario'|url }}" class="sz-back-link">
+                    <i class="fas fa-arrow-left mr-1"></i> Volver al inventario
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <form id="formProducto" enctype="multipart/form-data">
+        <input type="hidden" name="id" value="{{ model.id }}">
+
+        <div class="row">
+
+            {# Columna principal #}
+            <div class="col-lg-8">
+
+                {# Información básica #}
+                <div class="sz-dash-card animate-in mb-3" style="--delay:.05s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-tag"></i> Información básica</span>
+                    </div>
+                    <div class="p-4">
+
+                        <div class="form-group">
+                            <label for="nombre">Nombre del producto *</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre"
+                                   value="{{ model.nombre }}" placeholder="Ej. Leche entera 1L" required>
+                            <span class="form-validation-failed" id="err-nombre"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="descripcion">Descripción</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion"
+                                      rows="3" placeholder="Descripción opcional del producto">{{ model.descripcion }}</textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="categoria_id">Categoría *</label>
+                                    <select class="form-control" id="categoria_id" name="categoria_id" required>
+                                        <option value="">Selecciona una categoría</option>
+                                        {% for cat in categorias %}
+                                        <option value="{{ cat.id }}" {% if model.categoria_id == cat.id %}selected{% endif %}>
+                                            {{ cat.nombre }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <span class="form-validation-failed" id="err-categoria"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="proveedor_id">Proveedor</label>
+                                    <select class="form-control" id="proveedor_id" name="proveedor_id">
+                                        <option value="">Sin proveedor</option>
+                                        {% for prov in proveedores %}
+                                        <option value="{{ prov.id }}" {% if model.proveedor_id == prov.id %}selected{% endif %}>
+                                            {{ prov.nombre }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# Código de barras con soporte lector #}
+                        <div class="form-group">
+                            <label for="codigo_barras">Código de barras</label>
+                            <div class="sz-barcode-wrap">
+                                <input type="text" class="form-control" id="codigo_barras"
+                                       name="codigo_barras" value="{{ model.codigo_barras }}"
+                                       placeholder="Escanea o escribe el código">
+                                <button type="button" class="sz-barcode-btn" id="btnEscanear" title="Activar lector">
+                                    <i class="fas fa-barcode"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Puedes usar un lector de código de barras — haz clic en el campo y escanea.</small>
+                        </div>
+
+                        {# Fecha de caducidad #}
+                        <div class="form-group">
+                            <label for="fecha_caducidad">
+                                <i class="fas fa-calendar-times mr-1"></i> Fecha de caducidad
+                            </label>
+                            <input type="date" class="form-control" id="fecha_caducidad"
+                                   name="fecha_caducidad"
+                                   value="{{ model.fecha_caducidad ? model.fecha_caducidad|date('Y-m-d') : '' }}">
+                            <small class="text-muted">Opcional. Dejar en blanco si el producto no caduca.</small>
+                        </div>
+
+                    </div>
+                </div>
+
+                {# Precios y stock #}
+                <div class="sz-dash-card animate-in" style="--delay:.1s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-dollar-sign"></i> Precios y stock</span>
+                    </div>
+                    <div class="p-4">
+
+                        {# Tipo de venta #}
+                        <div class="form-group">
+                            <label class="d-block">Tipo de venta *</label>
+                            <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
+                                <label class="btn btn-outline-secondary {% if not model.venta_por_peso %}active{% endif %}">
+                                    <input type="radio" name="venta_por_peso" value="0"
+                                           {% if not model.venta_por_peso %}checked{% endif %}>
+                                    <i class="fas fa-cube mr-1"></i> Por unidad / pieza
+                                </label>
+                                <label class="btn btn-outline-secondary {% if model.venta_por_peso %}active{% endif %}">
+                                    <input type="radio" name="venta_por_peso" value="1"
+                                           {% if model.venta_por_peso %}checked{% endif %}>
+                                    <i class="fas fa-weight mr-1"></i> Por peso / gramaje
+                                </label>
+                            </div>
+                        </div>
+
+                        {# Unidad de peso (solo visible cuando es por peso) #}
+                        <div class="form-group" id="seccionUnidadPeso"
+                             style="{{ model.venta_por_peso ? '' : 'display:none' }}">
+                            <label for="unidad_peso">Unidad del precio *</label>
+                            <select class="form-control" id="unidad_peso" name="unidad_peso">
+                                <option value="kg" {% if model.unidad_peso == 'kg' or not model.unidad_peso %}selected{% endif %}>
+                                    Kilogramos — precio por kg
+                                </option>
+                                <option value="g"  {% if model.unidad_peso == 'g'  %}selected{% endif %}>
+                                    Gramos — precio por g
+                                </option>
+                                <option value="lb" {% if model.unidad_peso == 'lb' %}selected{% endif %}>
+                                    Libras — precio por lb
+                                </option>
+                            </select>
+                            <small class="text-muted">
+                                El cliente podrá indicar cuántos gramos quiere y el precio se calculará automáticamente.
+                            </small>
+                            <span class="form-validation-failed" id="err-unidad_peso"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="precio_compra">Precio de compra *</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text sz-input-prefix">$</span>
+                                        </div>
+                                        <input type="number" class="form-control" id="precio_compra"
+                                               name="precio_compra" value="{{ model.precio_compra }}"
+                                               step="0.01" min="0" placeholder="0.00" required>
+                                    </div>
+                                    <span class="form-validation-failed" id="err-precio_compra"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="precio_venta" id="labelPrecioVenta">Precio de venta *</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text sz-input-prefix">$</span>
+                                        </div>
+                                        <input type="number" class="form-control" id="precio_venta"
+                                               name="precio_venta" value="{{ model.precio_venta }}"
+                                               step="0.01" min="0.01" placeholder="0.00" required>
+                                    </div>
+                                    <span class="form-validation-failed" id="err-precio_venta"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="stock" id="labelStock">Stock actual *</label>
+                                    <input type="number" class="form-control" id="stock"
+                                           name="stock" value="{{ model.stock }}"
+                                           min="0" step="1" placeholder="0" required>
+                                    <span class="form-validation-failed" id="err-stock"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="stock_minimo" id="labelStockMinimo">Stock mínimo *</label>
+                                    <input type="number" class="form-control" id="stock_minimo"
+                                           name="stock_minimo" value="{{ model.stock_minimo ?: 5 }}"
+                                           min="0" step="1" placeholder="5" required>
+                                    <small class="text-muted" id="textoStockMinimo">
+                                        Se generará alerta cuando el stock llegue a este nivel.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# Margen de ganancia — calculado automáticamente #}
+                        <div class="sz-margen-info" id="margenInfo">
+                            <i class="fas fa-chart-line mr-2"></i>
+                            Margen: <strong id="margenValor">—</strong>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            {# Columna imagen #}
+            <div class="col-lg-4">
+                <div class="sz-dash-card animate-in" style="--delay:.15s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-image"></i> Imagen</span>
+                    </div>
+                    <div class="p-4">
+
+                        <div class="sz-imagen-preview" id="imagenPreview">
+                            {% if model.imagen %}
+                                <img src="{{ ('images/productos/' ~ model.imagen)|public }}"
+                                     id="imgPreview" alt="Imagen del producto">
+                            {% else %}
+                                <div class="sz-imagen-placeholder" id="imgPlaceholder">
+                                    <i class="fas fa-image fa-3x"></i>
+                                    <span>Sin imagen</span>
+                                </div>
+                                <img id="imgPreview" style="display:none" alt="Imagen del producto">
+                            {% endif %}
+                        </div>
+
+                        <label for="imagen" class="sz-upload-btn mt-3">
+                            <i class="fas fa-upload mr-2"></i>
+                            {{ model.imagen ? 'Cambiar imagen' : 'Subir imagen' }}
+                        </label>
+                        <input type="file" id="imagen" name="imagen"
+                               accept="image/jpeg,image/png,image/webp"
+                               class="d-none">
+                        <small class="text-muted d-block text-center mt-2">
+                            JPG, PNG o WebP · Máx. 2MB
+                        </small>
+
+                    </div>
+                </div>
+
+                {# Botones #}
+                <div class="sz-dash-card animate-in mt-3" style="--delay:.2s">
+                    <div class="p-3">
+                        <button type="submit" class="btn btn-sz btn-block" id="btnGuardar">
+                            <i class="fas fa-save mr-2"></i> Guardar producto
+                        </button>
+                        <a href="{{ 'inventario'|url }}" class="btn btn-outline-secondary btn-block mt-2">
+                            Cancelar
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </form>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    // ── Preview de imagen ──────────────────────────────────
+    $('#imagen').on('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            $('#imgPlaceholder').hide();
+            $('#imgPreview').attr('src', e.target.result).show();
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // ── Toggle venta por peso ──────────────────────────────
+    function unidadSeleccionada() {
+        return $('#unidad_peso').val() || 'kg';
+    }
+
+    function esPeso() {
+        return $('input[name="venta_por_peso"]:checked').val() === '1';
+    }
+
+    function actualizarLabels() {
+        const peso   = esPeso();
+        const unidad = unidadSeleccionada();
+
+        $('#seccionUnidadPeso').toggle(peso);
+
+        $('#labelPrecioVenta').text(peso ? `Precio de venta (por ${unidad}) *` : 'Precio de venta *');
+        $('#labelStock').text(peso ? `Stock actual (${unidad}) *` : 'Stock actual *');
+        $('#labelStockMinimo').text(peso ? `Stock mínimo (${unidad}) *` : 'Stock mínimo *');
+
+        const step = peso ? '0.001' : '1';
+        $('#stock, #stock_minimo').attr('step', step);
+
+        calcularMargen();
+    }
+
+    $('input[name="venta_por_peso"]').on('change', actualizarLabels);
+    $('#unidad_peso').on('change', actualizarLabels);
+    actualizarLabels();
+
+    // ── Cálculo de margen automático ───────────────────────
+    function calcularMargen() {
+        const compra = parseFloat($('#precio_compra').val()) || 0;
+        const venta  = parseFloat($('#precio_venta').val()) || 0;
+
+        if (compra > 0 && venta > 0) {
+            const margen   = ((venta - compra) / compra * 100).toFixed(1);
+            const ganancia = (venta - compra).toFixed(2);
+            const unidad   = esPeso() ? ` por ${unidadSeleccionada()}` : ' por unidad';
+            $('#margenValor').text(`${margen}% ($${ganancia}${unidad})`);
+            $('#margenInfo').css('color', margen >= 0 ? 'var(--sz-success)' : 'var(--sz-danger)');
+        } else {
+            $('#margenValor').text('—');
+        }
+    }
+
+    $('#precio_compra, #precio_venta').on('input', calcularMargen);
+    calcularMargen();
+
+    // ── Lector de código de barras ─────────────────────────
+    // El lector envía el código y presiona Enter automáticamente
+    // Solo detectamos el Enter en el campo de código
+    $('#codigo_barras').on('keypress', function (e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            const codigo = $(this).val().trim();
+            if (!codigo) return;
+
+            // Verificar si el código ya existe (solo en modo nuevo)
+            {% if not model.id %}
+            $.ajax({
+                url:    base_url('inventario/buscarCodigo'),
+                method: 'POST',
+                data:   { codigo: codigo },
+                dataType: 'json',
+                success: function (res) {
+                    if (res.response) {
+                        alert('⚠️ Este código ya está asignado al producto: ' + res.result.nombre);
+                        $('#codigo_barras').val('').focus();
+                    }
+                }
+            });
+            {% endif %}
+        }
+    });
+
+    // ── Submit del formulario ──────────────────────────────
+    $('#formProducto').on('submit', function (e) {
+        e.preventDefault();
+
+        // Limpiar errores previos
+        $('.form-validation-failed').text('');
+
+        $('#btnGuardar').prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...');
+
+        const formData = new FormData(this);
+
+        $.ajax({
+            url:         base_url('inventario/guardar'),
+            method:      'POST',
+            data:        formData,
+            processData: false,
+            contentType: false,
+            dataType:    'json',
+            success: function (res) {
+                if (res.response) {
+                    redirect(res.href || 'inventario');
+                } else if (res.validations && Object.keys(res.validations).length) {
+                    // Mostrar errores de validación
+                    $.each(res.validations, function (campo, msg) {
+                        if (msg) $('#err-' + campo).text(msg);
+                    });
+                    $('#btnGuardar').prop('disabled', false)
+                        .html('<i class="fas fa-save mr-2"></i> Guardar producto');
+                } else {
+                    alert(res.message || 'Error al guardar');
+                    $('#btnGuardar').prop('disabled', false)
+                        .html('<i class="fas fa-save mr-2"></i> Guardar producto');
+                }
+            },
+            error: function () {
+                alert('Error de conexión');
+                $('#btnGuardar').prop('disabled', false)
+                    .html('<i class="fas fa-save mr-2"></i> Guardar producto');
+            }
+        });
+    });
+
+});
+</script>
+{% endblock %}

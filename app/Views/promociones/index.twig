@@ -1,0 +1,158 @@
+{% extends "partials/new_layout.twig" %}
+
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Promociones</h1>
+            <p class="sz-dash-sub">{{ promociones|length }} promoción{{ promociones|length != 1 ? 'es' : '' }} registradas</p>
+        </div>
+        <a href="{{ 'promociones/formulario'|url }}" class="btn btn-sz">
+            <i class="fas fa-plus mr-2"></i> Nueva promoción
+        </a>
+    </div>
+
+    <div class="sz-dash-card animate-in" style="--delay:.05s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-tags"></i> Lista de promociones</span>
+        </div>
+
+        {% if promociones|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Nombre</th>
+                        <th class="text-center">Tipo</th>
+                        <th class="text-center">Valor</th>
+                        <th>Vigencia</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for promo in promociones %}
+                    {% set vigente = promo.activo and promo.fecha_inicio <= hoy and promo.fecha_fin >= hoy %}
+                    <tr>
+                        <td>
+                            <span class="sz-prod-nombre">{{ promo.producto.nombre }}</span>
+                        </td>
+                        <td>{{ promo.nombre }}</td>
+                        <td class="text-center">
+                            {% if promo.tipo == 'porcentaje' %}
+                                <span class="sz-promo-badge sz-promo--pct">% Porcentaje</span>
+                            {% elseif promo.tipo == 'precio_fijo' %}
+                                <span class="sz-promo-badge sz-promo--fijo">{{ _cfg.simbolo }} Precio fijo</span>
+                            {% elseif promo.tipo == '2x1' %}
+                                <span class="sz-promo-badge sz-promo--2x1">2×1</span>
+                            {% else %}
+                                <span class="sz-promo-badge sz-promo--cant">Cantidad mínima</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if promo.tipo == 'porcentaje' or promo.tipo == 'cantidad_minima' %}
+                                <strong>{{ promo.valor }}%</strong>
+                                {% if promo.tipo == 'cantidad_minima' %}
+                                    <small class="text-muted">({{ promo.cantidad_min }}+ uds)</small>
+                                {% endif %}
+                            {% elseif promo.tipo == 'precio_fijo' %}
+                                <strong>{{ _cfg.simbolo }}{{ promo.valor|number_format(2, '.', ',') }}</strong>
+                            {% else %}
+                                <strong>—</strong>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ promo.fecha_inicio|date('d/m/Y') }}</small>
+                            <small class="text-muted mx-1">→</small>
+                            <small>{{ promo.fecha_fin|date('d/m/Y') }}</small>
+                        </td>
+                        <td class="text-center">
+                            {% if not promo.activo %}
+                                <span class="sz-stock-badge sz-badge--danger">Inactiva</span>
+                            {% elseif promo.fecha_fin < hoy %}
+                                <span class="sz-stock-badge sz-badge--warn">Vencida</span>
+                            {% elseif promo.fecha_inicio > hoy %}
+                                <span class="sz-stock-badge" style="background:#e6f1fb;color:#185FA5;border:1px solid #b5d4f4">Próxima</span>
+                            {% else %}
+                                <span class="sz-stock-badge sz-badge--ok">Vigente</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ ('promociones/formulario/' ~ promo.id)|url }}"
+                               class="btn btn-sm btn-outline-secondary mr-1">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if promo.activo %}
+                            <button class="btn btn-sm btn-outline-danger btn-desactivar"
+                                    data-id="{{ promo.id }}"
+                                    data-nombre="{{ promo.nombre }}">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="sz-empty" style="padding:3rem">
+            <i class="fas fa-tags fa-2x mb-3 d-block" style="color:var(--sz-border)"></i>
+            No hay promociones registradas
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal fade" id="modalDesactivar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Desactivar promoción</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">¿Desactivar <strong id="nombrePromo"></strong>?</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarDesactivar">
+                    <i class="fas fa-ban mr-1"></i> Desactivar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    let idDesactivar = null;
+
+    $(document).on('click', '.btn-desactivar', function () {
+        idDesactivar = $(this).data('id');
+        $('#nombrePromo').text($(this).data('nombre'));
+        $('#modalDesactivar').modal('show');
+    });
+
+    $('#btnConfirmarDesactivar').on('click', function () {
+        if (!idDesactivar) return;
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>...');
+        $.ajax({
+            url: base_url('promociones/desactivar'), method: 'POST',
+            data: { id: idDesactivar }, dataType: 'json',
+            success: function (res) {
+                if (res.response) { $('#modalDesactivar').modal('hide'); location.reload(); }
+                else alert(res.message);
+            },
+            complete: function () {
+                $('#btnConfirmarDesactivar').prop('disabled', false)
+                    .html('<i class="fas fa-ban mr-1"></i> Desactivar');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

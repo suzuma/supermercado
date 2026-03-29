@@ -1,0 +1,202 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">{{ title }}</h1>
+            <p class="sz-dash-sub">
+                <a href="{{ 'corte-caja/historial'|url }}" class="sz-back-link">
+                    <i class="fas fa-arrow-left mr-1"></i> Volver al historial
+                </a>
+            </p>
+        </div>
+        <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-print mr-1"></i> Imprimir
+        </button>
+    </div>
+
+    <div class="row">
+
+        {# Resumen general #}
+        <div class="col-lg-5 mb-4">
+
+            <div class="sz-dash-card animate-in mb-3" style="--delay:.05s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-info-circle"></i> Información del corte</span>
+                </div>
+                <div class="p-4">
+                    <table class="table table-sm mb-0">
+                        <tr>
+                            <td class="text-muted">Fecha y hora</td>
+                            <td><strong>{{ corte.created_at|date("d/m/Y H:i") }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Cajero</td>
+                            <td>{{ corte.usuario.nombre ?? '—' }} {{ corte.usuario.apellido ?? '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Ventas incluidas</td>
+                            <td><strong>{{ corte.num_ventas }}</strong></td>
+                        </tr>
+                        {% if corte.observaciones %}
+                        <tr>
+                            <td class="text-muted">Observaciones</td>
+                            <td>{{ corte.observaciones }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <div class="sz-dash-card animate-in" style="--delay:.1s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-receipt"></i> Desglose de ventas</span>
+                </div>
+                <div class="p-4">
+                    <div class="sz-corte-desglose">
+                        <div class="sz-corte-fila sz-corte-fila--efectivo">
+                            <div class="sz-corte-fila-icon"><i class="fas fa-money-bill-wave"></i></div>
+                            <div class="sz-corte-fila-info"><span class="sz-corte-fila-label">Efectivo</span></div>
+                            <span class="sz-corte-fila-monto">{{ _cfg.simbolo }}{{ corte.total_efectivo|number_format(2, '.', ',') }}</span>
+                        </div>
+                        <div class="sz-corte-fila sz-corte-fila--tarjeta">
+                            <div class="sz-corte-fila-icon"><i class="fas fa-credit-card"></i></div>
+                            <div class="sz-corte-fila-info"><span class="sz-corte-fila-label">Tarjeta</span></div>
+                            <span class="sz-corte-fila-monto">{{ _cfg.simbolo }}{{ corte.total_tarjeta|number_format(2, '.', ',') }}</span>
+                        </div>
+                        <div class="sz-corte-fila sz-corte-fila--transferencia">
+                            <div class="sz-corte-fila-icon"><i class="fas fa-university"></i></div>
+                            <div class="sz-corte-fila-info"><span class="sz-corte-fila-label">Transferencia</span></div>
+                            <span class="sz-corte-fila-monto">{{ _cfg.simbolo }}{{ corte.total_transferencia|number_format(2, '.', ',') }}</span>
+                        </div>
+                        <div class="sz-corte-total">
+                            <span>Total vendido</span>
+                            <strong>{{ _cfg.simbolo }}{{ corte.total_ventas|number_format(2, '.', ',') }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        {# Arqueo de efectivo #}
+        <div class="col-lg-7 mb-4">
+            <div class="sz-dash-card animate-in" style="--delay:.1s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-calculator"></i> Arqueo de efectivo</span>
+                </div>
+                <div class="p-4">
+
+                    <div class="sz-arqueo-resumen mb-4">
+                        <div class="sz-arqueo-linea">
+                            <span>Fondo inicial</span>
+                            <span>{{ _cfg.simbolo }}{{ corte.fondo_inicial|number_format(2, '.', ',') }}</span>
+                        </div>
+                        <div class="sz-arqueo-linea">
+                            <span>+ Ventas en efectivo</span>
+                            <span>{{ _cfg.simbolo }}{{ corte.total_efectivo|number_format(2, '.', ',') }}</span>
+                        </div>
+                        <div class="sz-arqueo-linea sz-arqueo-linea--total">
+                            <span>= Esperado en caja</span>
+                            <strong>{{ _cfg.simbolo }}{{ corte.efectivo_esperado|number_format(2, '.', ',') }}</strong>
+                        </div>
+                        <div class="sz-arqueo-linea sz-arqueo-linea--total">
+                            <span>Contado en caja</span>
+                            <strong>{{ _cfg.simbolo }}{{ corte.efectivo_contado|number_format(2, '.', ',') }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="sz-arqueo-diferencia
+                        {% if corte.diferencia == 0 %}sz-arqueo-dif--ok
+                        {% else %}sz-arqueo-dif--mal{% endif %}">
+                        <div class="sz-arqueo-dif-label">Diferencia</div>
+                        <div class="sz-arqueo-dif-monto">
+                            {% if corte.diferencia == 0 %}
+                                {{ _cfg.simbolo }}0.00
+                            {% elseif corte.diferencia > 0 %}
+                                +{{ _cfg.simbolo }}{{ corte.diferencia|number_format(2, '.', ',') }}
+                            {% else %}
+                                -{{ _cfg.simbolo }}{{ (corte.diferencia * -1)|number_format(2, '.', ',') }}
+                            {% endif %}
+                        </div>
+                        <div class="sz-arqueo-dif-estado">
+                            {% if corte.diferencia == 0 %}
+                                <i class="fas fa-check-circle mr-1"></i>Cuadra perfectamente
+                            {% elseif corte.diferencia > 0 %}
+                                <i class="fas fa-exclamation-circle mr-1"></i>Sobrante en caja
+                            {% else %}
+                                <i class="fas fa-exclamation-circle mr-1"></i>Faltante en caja
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {# Listado de ventas incluidas #}
+    {% if corte.ventas|length > 0 %}
+    <div class="sz-dash-card animate-in" style="--delay:.15s">
+        <div class="sz-card-header">
+            <span class="sz-card-title">
+                <i class="fas fa-list"></i> Ventas incluidas ({{ corte.ventas|length }})
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Hora</th>
+                        <th>Cliente</th>
+                        <th class="text-center">Forma de pago</th>
+                        <th class="text-right">Total</th>
+                        <th class="text-center">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for venta in corte.ventas %}
+                    <tr>
+                        <td>
+                            <a href="{{ ('ventas/ticket/' ~ venta.id)|url }}" target="_blank"
+                               class="text-muted small">#{{ venta.id }}</a>
+                        </td>
+                        <td><small>{{ venta.created_at|date("H:i") }}</small></td>
+                        <td>{{ venta.cliente ? venta.cliente.nombre ~ ' ' ~ venta.cliente.apellido : '—' }}</td>
+                        <td class="text-center">
+                            {% if venta.tipo == 'efectivo' %}
+                                <span class="sz-promo-badge" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0">
+                                    <i class="fas fa-money-bill-wave mr-1"></i>Efectivo
+                                </span>
+                            {% elseif venta.tipo == 'tarjeta' %}
+                                <span class="sz-promo-badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe">
+                                    <i class="fas fa-credit-card mr-1"></i>Tarjeta
+                                </span>
+                            {% else %}
+                                <span class="sz-promo-badge" style="background:#fdf4ff;color:#6b21a8;border:1px solid #e9d5ff">
+                                    <i class="fas fa-university mr-1"></i>Transf.
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            <strong>{{ _cfg.simbolo }}{{ venta.total|number_format(2, '.', ',') }}</strong>
+                        </td>
+                        <td class="text-center">
+                            <span class="sz-stock-badge {% if venta.estado == 'completada' %}sz-badge--ok{% else %}sz-badge--danger{% endif %}">
+                                {{ venta.estado }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

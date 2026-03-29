@@ -1,0 +1,173 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Asistencia</h1>
+            <p class="sz-dash-sub">
+                <a href="{{ 'empleados'|url }}" class="sz-back-link">
+                    <i class="fas fa-arrow-left mr-1"></i> Volver a empleados
+                </a>
+            </p>
+        </div>
+        <div class="sz-emp-info">
+            <div class="sz-emp-avatar">
+                {{ empleado.usuario.nombre|slice(0,1)|upper }}{{ empleado.usuario.apellido|slice(0,1)|upper }}
+            </div>
+            <div>
+                <span class="sz-prod-nombre">{{ empleado.usuario.nombre }} {{ empleado.usuario.apellido }}</span>
+                <small class="sz-prod-desc">{{ empleado.puesto }} · {{ empleado.turno|capitalize }}</small>
+            </div>
+        </div>
+    </div>
+
+    {# Navegación de mes #}
+    <div class="sz-filtros animate-in mb-3" style="--delay:.05s">
+        <form method="GET" action="{{ ('empleados/asistencia/' ~ empleado.id)|url }}" class="sz-filtros-form">
+            <label style="font-size:.82rem;font-weight:500;color:var(--sz-ink);margin:0">Mes:</label>
+            <input type="month" name="mes" value="{{ mes }}" class="form-control" style="width:auto">
+            <button type="submit" class="btn btn-sz">
+                <i class="fas fa-search mr-1"></i> Ver
+            </button>
+        </form>
+    </div>
+
+    <div class="row">
+
+        {# Calendario de asistencia #}
+        <div class="col-lg-8">
+            <div class="sz-dash-card animate-in" style="--delay:.1s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-calendar-alt"></i> Registro del mes</span>
+                    <span class="sz-card-hint">{{ mes|date('F Y') }}</span>
+                </div>
+
+                {% if historial|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th class="text-center">Entrada</th>
+                                <th class="text-center">Salida</th>
+                                <th>Observación</th>
+                                <th class="text-center">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reg in historial %}
+                            <tr>
+                                <td>{{ reg.fecha|date('d/m/Y') }}</td>
+                                <td class="text-center">{{ reg.hora_entrada ?? '—' }}</td>
+                                <td class="text-center">{{ reg.hora_salida ?? '—' }}</td>
+                                <td><small class="text-muted">{{ reg.observacion ?? '—' }}</small></td>
+                                <td class="text-center">
+                                    {% if reg.hora_entrada and reg.hora_salida %}
+                                        <span class="sz-stock-badge sz-badge--ok">Completo</span>
+                                    {% elseif reg.hora_entrada %}
+                                        <span class="sz-stock-badge sz-badge--warn">Parcial</span>
+                                    {% else %}
+                                        <span class="sz-stock-badge sz-badge--danger">Sin registro</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="sz-empty" style="padding:3rem">
+                    <i class="fas fa-calendar-times fa-2x mb-3 d-block" style="color:var(--sz-border)"></i>
+                    Sin registros para este mes
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Formulario registro #}
+        <div class="col-lg-4">
+            <div class="sz-dash-card animate-in" style="--delay:.15s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-clock"></i> Registrar asistencia</span>
+                </div>
+                <div class="p-4">
+                    <form id="formAsistencia">
+                        <input type="hidden" name="empleado_id" value="{{ empleado.id }}">
+
+                        <div class="form-group">
+                            <label for="fecha">Fecha *</label>
+                            <input type="date" class="form-control" id="fecha" name="fecha"
+                                   value="{{ "now"|date('Y-m-d') }}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="hora_entrada">Hora de entrada</label>
+                            <input type="time" class="form-control" id="hora_entrada" name="hora_entrada">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="hora_salida">Hora de salida</label>
+                            <input type="time" class="form-control" id="hora_salida" name="hora_salida">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="observacion">Observación</label>
+                            <textarea class="form-control" id="observacion" name="observacion"
+                                      rows="2" placeholder="Incidencia, retardo, etc."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-sz btn-block" id="btnAsistencia">
+                            <i class="fas fa-check mr-2"></i> Registrar
+                        </button>
+                    </form>
+
+                    <div class="alert alert-success mt-3 d-none" id="alertExito">
+                        <i class="fas fa-check-circle mr-2"></i> Asistencia registrada correctamente
+                    </div>
+                    <div class="alert alert-danger mt-3 d-none" id="alertError">
+                        Error al registrar la asistencia
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    $('#formAsistencia').on('submit', function (e) {
+        e.preventDefault();
+        $('#alertExito, #alertError').addClass('d-none');
+        $('#btnAsistencia').prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin mr-2"></i> Registrando...');
+
+        $.ajax({
+            url:      base_url('empleados/asistencia'),
+            method:   'POST',
+            data:     $(this).serialize(),
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    $('#alertExito').removeClass('d-none');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    $('#alertError').text(res.message).removeClass('d-none');
+                }
+            },
+            error: function () {
+                $('#alertError').removeClass('d-none');
+            },
+            complete: function () {
+                $('#btnAsistencia').prop('disabled', false)
+                    .html('<i class="fas fa-check mr-2"></i> Registrar');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

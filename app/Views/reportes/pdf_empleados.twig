@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+    body { font-family: Arial, sans-serif; font-size: 10px; color: #0f1a0d; margin: 0; padding: 16px; }
+    .header { border-bottom: 2px solid #1a6b2f; padding-bottom: 8px; margin-bottom: 12px; }
+    .logo { font-size: 16px; font-weight: bold; color: #1a6b2f; }
+    .logo span { color: #e85d04; }
+    .titulo { font-size: 12px; font-weight: bold; color: #1a6b2f; margin-bottom: 10px; border-left: 3px solid #1a6b2f; padding-left: 6px; }
+    .resumen { display: flex; gap: 10px; margin-bottom: 12px; }
+    .res-item { flex: 1; background: #f5f7f4; border-radius: 4px; padding: 6px 10px; }
+    .res-label { font-size: 8px; text-transform: uppercase; color: #6b7a6d; }
+    .res-valor { font-size: 13px; font-weight: bold; color: #1a6b2f; }
+    table { width: 100%; border-collapse: collapse; font-size: 9px; }
+    th { background: #1a6b2f; color: #fff; font-size: 8px; text-transform: uppercase; padding: 4px 5px; text-align: left; }
+    td { padding: 4px 5px; border-bottom: 1px solid #dae3db; }
+    tr:nth-child(even) td { background: #f8faf8; }
+    .text-right  { text-align: right; }
+    .text-center { text-align: center; }
+    .total-row td { font-weight: bold; background: #eaf3de; font-size: 10px; }
+    .badge { display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 8px; font-weight: bold; }
+    .badge-mat { background: #faeeda; color: #633806; }
+    .badge-ves { background: #e6f1fb; color: #0C447C; }
+    .badge-noc { background: #EEEDFE; color: #3C3489; }
+    .footer { margin-top: 16px; border-top: 1px solid #dae3db; padding-top: 6px; font-size: 8px; color: #6b7a6d; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">Supermercado<span>Web</span></div>
+    <div style="font-size:9px;color:#6b7a6d">Reporte de empleados — {{ fecha }}</div>
+</div>
+
+<div class="titulo">Empleados activos</div>
+
+<div class="resumen">
+    <div class="res-item">
+        <div class="res-label">Total empleados</div>
+        <div class="res-valor">{{ empleados.total }}</div>
+    </div>
+    <div class="res-item">
+        <div class="res-label">Nómina mensual</div>
+        <div class="res-valor">${{ empleados.nomina_total|number_format(2, '.', ',') }}</div>
+    </div>
+    {% for turno, cant in empleados.por_turno %}
+    <div class="res-item">
+        <div class="res-label">{{ turno|capitalize }}</div>
+        <div class="res-valor">{{ cant }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Puesto</th>
+            <th>Rol</th>
+            <th class="text-center">Turno</th>
+            <th class="text-right">Salario</th>
+            <th>Ingreso</th>
+            <th class="text-center">Meses</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for emp in empleados.empleados %}
+        <tr>
+            <td>{{ emp.nombre }} {{ emp.apellido }}</td>
+            <td>{{ emp.email }}</td>
+            <td>{{ emp.puesto }}</td>
+            <td>{{ emp.rol }}</td>
+            <td class="text-center">
+                <span class="badge badge-{{ emp.turno|slice(0,3) }}">{{ emp.turno|capitalize }}</span>
+            </td>
+            <td class="text-right">${{ emp.salario|number_format(2, '.', ',') }}</td>
+            <td>{{ emp.fecha_ingreso|date('d/m/Y') }}</td>
+            <td class="text-center">{{ emp.meses_servicio }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr class="total-row">
+            <td colspan="5">NÓMINA TOTAL MENSUAL</td>
+            <td class="text-right">${{ empleados.nomina_total|number_format(2, '.', ',') }}</td>
+            <td colspan="2"></td>
+        </tr>
+    </tfoot>
+</table>
+
+<div class="footer">Supermercado Web — Reporte de empleados generado automáticamente</div>
+</body>
+</html>

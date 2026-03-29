@@ -1,0 +1,18 @@
+{
+  "autoload": {
+    "psr-4": {
+      "Core\\": "core/",
+      "App\\": "app/"
+    }
+  },
+  "require": {
+    "phroute/phroute": "^2.1",
+    "twig/twig": "^3.0",
+    "monolog/monolog": "^2.0",
+    "illuminate/database": "^9.0",
+    "respect/validation": "^2.0",
+    "intervention/image": "^2.7",
+    "dompdf/dompdf": "^2.0",
+    "phpmailer/phpmailer": "^7.0"
+  }
+}

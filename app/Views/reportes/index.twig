@@ -1,0 +1,534 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Reportes y análisis</h1>
+            <p class="sz-dash-sub">{{ desde|date('d/m/Y') }} — {{ hasta|date('d/m/Y') }}</p>
+        </div>
+    </div>
+
+    {# Filtro de período #}
+    <div class="sz-filtros animate-in mb-3" style="--delay:.05s">
+        <form method="GET" action="{{ 'reportes'|url }}" class="sz-filtros-form">
+            <div class="sz-filtro-group" style="max-width:160px">
+                <label style="font-size:.72rem;font-weight:500;text-transform:uppercase;color:var(--sz-muted);margin-bottom:4px;display:block">Desde</label>
+                <input type="date" name="desde" value="{{ desde }}" class="form-control form-control-sm">
+            </div>
+            <div class="sz-filtro-group" style="max-width:160px">
+                <label style="font-size:.72rem;font-weight:500;text-transform:uppercase;color:var(--sz-muted);margin-bottom:4px;display:block">Hasta</label>
+                <input type="date" name="hasta" value="{{ hasta }}" class="form-control form-control-sm">
+            </div>
+            <button type="submit" class="btn btn-sz">
+                <i class="fas fa-search mr-1"></i> Aplicar
+            </button>
+            {# Accesos rápidos #}
+            <a href="{{ 'reportes'|url }}?desde={{ inicio_mes }}&hasta={{ "now"|date('Y-m-d') }}" class="btn btn-outline-secondary btn-sm">Este mes</a>
+            <a href="{{ 'reportes'|url }}?desde={{ hace7dias }}&hasta={{ "now"|date('Y-m-d') }}" class="btn btn-outline-secondary btn-sm">7 días</a>
+        </form>
+    </div>
+
+    {# Tarjetas resumen de ventas #}
+    <div class="sz-metrics animate-in" style="--delay:.1s">
+        <div class="sz-metric-card sz-metric--accent">
+            <div class="sz-metric-icon sz-icon--accent"><i class="fas fa-dollar-sign"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Total ventas</span>
+                <span class="sz-metric-value">{{ _cfg.simbolo }}{{ ventas.total_monto|number_format(2, '.', ',') }}</span>
+                <span class="sz-metric-sub">{{ ventas.total_ventas }} transacciones</span>
+            </div>
+        </div>
+        <div class="sz-metric-card">
+            <div class="sz-metric-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Promedio por venta</span>
+                <span class="sz-metric-value">{{ _cfg.simbolo }}{{ ventas.promedio|number_format(2, '.', ',') }}</span>
+                <span class="sz-metric-sub">en el período</span>
+            </div>
+        </div>
+        <div class="sz-metric-card">
+            <div class="sz-metric-icon sz-icon--teal"><i class="fas fa-boxes"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Valor inventario</span>
+                <span class="sz-metric-value">{{ _cfg.simbolo }}{{ inventario.valor_total|number_format(2, '.', ',') }}</span>
+                <span class="sz-metric-sub">{{ inventario.total }} productos activos</span>
+            </div>
+        </div>
+        <div class="sz-metric-card">
+            <div class="sz-metric-icon sz-icon--purple"><i class="fas fa-users"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Nómina mensual</span>
+                <span class="sz-metric-value">{{ _cfg.simbolo }}{{ empleados.nomina_total|number_format(2, '.', ',') }}</span>
+                <span class="sz-metric-sub">{{ empleados.total }} empleados activos</span>
+            </div>
+        </div>
+        <div class="sz-metric-card">
+            <div class="sz-metric-icon" style="background:rgba(192,57,43,.12);color:#c0392b"><i class="fas fa-undo"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Devoluciones</span>
+                <span class="sz-metric-value" style="color:#c0392b">-{{ _cfg.simbolo }}{{ devoluciones.total_monto|number_format(2, '.', ',') }}</span>
+                <span class="sz-metric-sub">{{ devoluciones.total_devoluciones }} transacciones · {{ devoluciones.tasa_devolucion }}% del ingreso</span>
+            </div>
+        </div>
+    </div>
+
+    {# Gráficas #}
+    <div class="sz-dash-grid animate-in" style="--delay:.15s">
+
+        {# Gráfica ventas por día #}
+        <div class="sz-dash-card sz-dash-card--wide">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-chart-area"></i> Ventas por día</span>
+                <div class="d-flex gap-2">
+                    <a href="{{ ('reportes/utilidades?desde=' ~ desde ~ '&hasta=' ~ hasta)|url }}"
+                       class="btn btn-sz btn-sm">
+                        <i class="fas fa-chart-pie mr-1"></i> Ver utilidades
+                    </a>
+                    <a href="{{ 'reportes/csvVentas'|url }}?desde={{ desde }}&hasta={{ hasta }}"
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-file-csv mr-1"></i> CSV
+                    </a>
+                    <a href="{{ 'reportes/pdfVentas'|url }}?desde={{ desde }}&hasta={{ hasta }}"
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-file-pdf mr-1"></i> PDF
+                    </a>
+                </div>
+            </div>
+            <div class="sz-chart-wrap" style="height:280px">
+                <canvas id="chartVentasDia"></canvas>
+            </div>
+        </div>
+
+        {# Gráfica forma de pago #}
+        <div class="sz-dash-card">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-credit-card"></i> Ventas por forma de pago</span>
+            </div>
+            <div class="sz-chart-wrap" style="height:220px">
+                <canvas id="chartFormaPago"></canvas>
+            </div>
+            <div class="p-3">
+                {% for fp in forma_pago %}
+                <div class="sz-total-row">
+                    <span>{{ fp.tipo|capitalize }}</span>
+                    <span class="font-weight-500">{{ _cfg.simbolo }}{{ fp.monto|number_format(2, '.', ',') }} ({{ fp.cantidad }} ventas)</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Productos más vendidos #}
+        <div class="sz-dash-card">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-fire"></i> Productos más vendidos</span>
+            </div>
+            <div class="sz-chart-wrap" style="height:220px">
+                <canvas id="chartMasVendidos"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    {# Tabla productos más vendidos #}
+    <div class="sz-dash-card animate-in mt-3" style="--delay:.2s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-trophy"></i> Top {{ mas_vendidos|length }} productos</span>
+        </div>
+        {% if mas_vendidos|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th class="text-center">Unidades</th>
+                        <th class="text-right">Precio</th>
+                        <th class="text-right">Ingreso total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i, prod in mas_vendidos %}
+                    <tr>
+                        <td>
+                            <span class="sz-rank {% if i == 0 %}sz-rank--gold{% elseif i == 1 %}sz-rank--silver{% elseif i == 2 %}sz-rank--bronze{% endif %}">
+                                {{ i + 1 }}
+                            </span>
+                        </td>
+                        <td><span class="sz-prod-nombre">{{ prod.nombre }}</span></td>
+                        <td><span class="sz-badge-cat">{{ prod.categoria }}</span></td>
+                        <td class="text-center"><strong>{{ prod.unidades_vendidas }}</strong></td>
+                        <td class="text-right">{{ _cfg.simbolo }}{{ prod.precio_venta|number_format(2, '.', ',') }}</td>
+                        <td class="text-right sz-venta-monto">{{ _cfg.simbolo }}{{ prod.ingreso_total|number_format(2, '.', ',') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="sz-empty" style="padding:2rem">Sin ventas en el período seleccionado</div>
+        {% endif %}
+    </div>
+
+    {# Sección devoluciones #}
+    <div class="sz-dash-grid animate-in mt-3" style="--delay:.22s">
+
+        {# Gráfica devoluciones por día #}
+        <div class="sz-dash-card sz-dash-card--wide">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-undo" style="color:#c0392b"></i> Devoluciones por día</span>
+                <a href="{{ 'devoluciones/historial'|url }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-history mr-1"></i> Ver historial
+                </a>
+            </div>
+            {% if devoluciones.por_dia|length > 0 %}
+            <div class="sz-chart-wrap" style="height:220px">
+                <canvas id="chartDevoluciones"></canvas>
+            </div>
+            {% else %}
+            <div class="sz-empty" style="padding:2.5rem">
+                <i class="fas fa-undo fa-2x mb-2 d-block" style="color:var(--sz-border)"></i>
+                Sin devoluciones en el período seleccionado
+            </div>
+            {% endif %}
+        </div>
+
+        {# Top productos más devueltos #}
+        <div class="sz-dash-card">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-exclamation-circle" style="color:#c0392b"></i> Más devueltos</span>
+            </div>
+            {% if devoluciones.mas_devueltos|length > 0 %}
+            <div class="sz-chart-wrap" style="height:220px">
+                <canvas id="chartMasDevueltos"></canvas>
+            </div>
+            {% else %}
+            <div class="sz-empty" style="padding:2.5rem">Sin datos</div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    {# Tabla productos más devueltos #}
+    {% if devoluciones.mas_devueltos|length > 0 %}
+    <div class="sz-dash-card animate-in mt-3" style="--delay:.23s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-list"></i> Detalle de devoluciones por producto</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th class="text-center">Unidades devueltas</th>
+                        <th class="text-right">Monto reembolsado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i, prod in devoluciones.mas_devueltos %}
+                    <tr>
+                        <td>
+                            <span class="sz-rank {% if i == 0 %}sz-rank--gold{% elseif i == 1 %}sz-rank--silver{% elseif i == 2 %}sz-rank--bronze{% endif %}">
+                                {{ i + 1 }}
+                            </span>
+                        </td>
+                        <td><span class="sz-prod-nombre">{{ prod.nombre }}</span></td>
+                        <td><span class="sz-badge-cat">{{ prod.categoria }}</span></td>
+                        <td class="text-center"><strong>{{ prod.unidades_devueltas }}</strong></td>
+                        <td class="text-right" style="color:#c0392b;font-weight:600">
+                            -{{ _cfg.simbolo }}{{ prod.monto_devuelto|number_format(2, '.', ',') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {# Reporte inventario #}
+    <div class="sz-dash-card animate-in mt-3" style="--delay:.25s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-warehouse"></i> Estado del inventario</span>
+            <div class="d-flex gap-2">
+                <a href="{{ 'reportes/csvInventario'|url }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-file-csv mr-1"></i> CSV
+                </a>
+                <a href="{{ 'reportes/pdfInventario'|url }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-file-pdf mr-1"></i> PDF
+                </a>
+            </div>
+        </div>
+        <div class="p-3 d-flex gap-3 border-bottom" style="font-size:.85rem">
+            <span><i class="fas fa-circle" style="color:var(--sz-success)"></i> {{ inventario.total - inventario.agotados - inventario.stock_bajo }} en orden</span>
+            <span><i class="fas fa-circle" style="color:var(--sz-warning)"></i> {{ inventario.stock_bajo }} stock bajo</span>
+            <span><i class="fas fa-circle" style="color:var(--sz-danger)"></i> {{ inventario.agotados }} agotados</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th class="text-right">P. Compra</th>
+                        <th class="text-right">P. Venta</th>
+                        <th class="text-right">Margen</th>
+                        <th class="text-center">Stock</th>
+                        <th class="text-center">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in inventario.productos %}
+                    <tr>
+                        <td><span class="sz-prod-nombre">{{ p.nombre }}</span></td>
+                        <td><span class="sz-badge-cat">{{ p.categoria }}</span></td>
+                        <td class="text-right">{{ _cfg.simbolo }}{{ p.precio_compra|number_format(2, '.', ',') }}</td>
+                        <td class="text-right">{{ _cfg.simbolo }}{{ p.precio_venta|number_format(2, '.', ',') }}</td>
+                        <td class="text-right text-success">{{ _cfg.simbolo }}{{ p.margen|number_format(2, '.', ',') }}</td>
+                        <td class="text-center"><strong>{{ p.stock }}</strong></td>
+                        <td class="text-center">
+                            {% if p.estado_stock == 'agotado' %}
+                                <span class="sz-stock-badge sz-badge--danger">Agotado</span>
+                            {% elseif p.estado_stock == 'bajo' %}
+                                <span class="sz-stock-badge sz-badge--warn">Stock bajo</span>
+                            {% else %}
+                                <span class="sz-stock-badge sz-badge--ok">OK</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# Reporte empleados #}
+    <div class="sz-dash-card animate-in mt-3" style="--delay:.3s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-id-badge"></i> Empleados activos</span>
+            <a href="{{ 'reportes/pdfEmpleados'|url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-file-pdf mr-1"></i> PDF
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Empleado</th>
+                        <th>Puesto</th>
+                        <th>Rol</th>
+                        <th class="text-center">Turno</th>
+                        <th class="text-right">Salario</th>
+                        <th>Antigüedad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in empleados.empleados %}
+                    <tr>
+                        <td>
+                            <div class="sz-emp-info">
+                                <div class="sz-emp-avatar" style="width:32px;height:32px;font-size:.7rem">
+                                    {{ emp.nombre|slice(0,1)|upper }}{{ emp.apellido|slice(0,1)|upper }}
+                                </div>
+                                <div>
+                                    <span class="sz-prod-nombre">{{ emp.nombre }} {{ emp.apellido }}</span>
+                                    <small class="sz-prod-desc">{{ emp.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ emp.puesto }}</td>
+                        <td><span class="sz-badge-cat">{{ emp.rol }}</span></td>
+                        <td class="text-center">
+                            <span class="sz-turno-badge sz-turno--{{ emp.turno }}">{{ emp.turno|capitalize }}</span>
+                        </td>
+                        <td class="text-right sz-venta-monto">{{ _cfg.simbolo }}{{ emp.salario|number_format(2, '.', ',') }}</td>
+                        <td>
+                            <small class="text-muted">
+                                {{ emp.fecha_ingreso|date('d/m/Y') }}
+                                ({{ emp.meses_servicio }} meses)
+                            </small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-right font-weight-bold">Nómina total mensual</td>
+                        <td class="text-right sz-venta-monto" style="font-size:1rem">
+                            {{ _cfg.simbolo }}{{ empleados.nomina_total|number_format(2, '.', ',') }}
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+$(document).ready(function () {
+
+    const verde   = '#1a6b2f';
+    const accent  = '#e85d04';
+    const azul    = '#185FA5';
+    const morado  = '#534AB7';
+    const gris    = '#6b7a6d';
+
+    // Gráfica ventas por día
+    const ctxDia = document.getElementById('chartVentasDia');
+    if (ctxDia) {
+        new Chart(ctxDia, {
+            type: 'bar',
+            data: {
+                labels:   {{ ventas.labels|json_encode|raw }},
+                datasets: [{
+                    label:           'Ventas $',
+                    data:            {{ ventas.montos|json_encode|raw }},
+                    backgroundColor: 'rgba(26,107,47,.7)',
+                    borderColor:     verde,
+                    borderWidth:     1,
+                    borderRadius:    4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: { label: c => ' $' + c.parsed.y.toLocaleString('es-MX', {minimumFractionDigits:2}) }}
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: gris, font: { size: 11 } } },
+                    y: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: { color: gris, font: { size: 11 }, callback: v => '$' + v.toLocaleString('es-MX') } }
+                }
+            }
+        });
+    }
+
+    // Gráfica forma de pago (dona)
+    const ctxPago = document.getElementById('chartFormaPago');
+    if (ctxPago) {
+        const formaPago = {{ forma_pago|json_encode|raw }};
+        new Chart(ctxPago, {
+            type: 'doughnut',
+            data: {
+                labels:   formaPago.map(f => f.tipo.charAt(0).toUpperCase() + f.tipo.slice(1)),
+                datasets: [{
+                    data:            formaPago.map(f => f.monto),
+                    backgroundColor: [verde, accent, azul, morado],
+                    borderWidth:     2,
+                    borderColor:     '#fff',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 11 }, color: gris } },
+                    tooltip: { callbacks: { label: c => ' $' + c.parsed.toLocaleString('es-MX', {minimumFractionDigits:2}) }}
+                }
+            }
+        });
+    }
+
+    // Gráfica devoluciones por día
+    const ctxDev = document.getElementById('chartDevoluciones');
+    if (ctxDev) {
+        new Chart(ctxDev, {
+            type: 'bar',
+            data: {
+                labels:   {{ devoluciones.labels|json_encode|raw }},
+                datasets: [{
+                    label:           'Devoluciones $',
+                    data:            {{ devoluciones.montos|json_encode|raw }},
+                    backgroundColor: 'rgba(192,57,43,.65)',
+                    borderColor:     '#c0392b',
+                    borderWidth:     1,
+                    borderRadius:    4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: c => ' $' + c.parsed.y.toLocaleString('es-MX', {minimumFractionDigits:2}) }}
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: gris, font: { size: 11 } } },
+                    y: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: { color: gris, font: { size: 11 }, callback: v => '$' + v.toLocaleString('es-MX') } }
+                }
+            }
+        });
+    }
+
+    // Gráfica productos más devueltos (barras horizontales)
+    const ctxMasDevueltos = document.getElementById('chartMasDevueltos');
+    if (ctxMasDevueltos) {
+        const masDevueltos = {{ devoluciones.mas_devueltos|json_encode|raw }};
+        new Chart(ctxMasDevueltos, {
+            type: 'bar',
+            data: {
+                labels:   masDevueltos.map(p => p.nombre.substring(0, 20)),
+                datasets: [{
+                    label:           'Unidades devueltas',
+                    data:            masDevueltos.map(p => p.unidades_devueltas),
+                    backgroundColor: 'rgba(192,57,43,.65)',
+                    borderColor:     '#c0392b',
+                    borderWidth:     1,
+                    borderRadius:    4,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: { color: gris, font: { size: 10 } } },
+                    y: { ticks: { color: gris, font: { size: 10 } } }
+                }
+            }
+        });
+    }
+
+    // Gráfica productos más vendidos (barras horizontales)
+    const ctxVendidos = document.getElementById('chartMasVendidos');
+    if (ctxVendidos) {
+        const masVendidos = {{ mas_vendidos|json_encode|raw }};
+        new Chart(ctxVendidos, {
+            type: 'bar',
+            data: {
+                labels:   masVendidos.map(p => p.nombre.substring(0, 20)),
+                datasets: [{
+                    label:           'Unidades',
+                    data:            masVendidos.map(p => p.unidades_vendidas),
+                    backgroundColor: 'rgba(232,93,4,.7)',
+                    borderColor:     accent,
+                    borderWidth:     1,
+                    borderRadius:    4,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: { color: gris, font: { size: 10 } } },
+                    y: { ticks: { color: gris, font: { size: 10 } } }
+                }
+            }
+        });
+    }
+
+});
+</script>
+{% endblock %}

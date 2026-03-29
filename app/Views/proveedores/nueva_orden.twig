@@ -1,0 +1,228 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Nueva orden de compra</h1>
+            <p class="sz-dash-sub">
+                <a href="{{ ('proveedores/ordenes/' ~ proveedor.id)|url }}" class="sz-back-link">
+                    <i class="fas fa-arrow-left mr-1"></i> Volver
+                </a>
+            </p>
+        </div>
+        <div class="sz-prov-info">
+            <div class="sz-prov-avatar">{{ proveedor.nombre|slice(0,2)|upper }}</div>
+            <div>
+                <span class="sz-prod-nombre">{{ proveedor.nombre }}</span>
+                <small class="sz-prod-desc">{{ proveedor.email ?? '' }}</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+
+        {# Lista de productos #}
+        <div class="col-lg-7">
+            <div class="sz-dash-card animate-in mb-3" style="--delay:.05s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-boxes"></i> Seleccionar productos</span>
+                </div>
+                <div class="p-3">
+                    <div class="sz-search-wrap mb-3">
+                        <i class="fas fa-search sz-search-icon"></i>
+                        <input type="text" id="inputBuscarProducto" class="sz-search-input"
+                               placeholder="Buscar producto...">
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="tablaProductos">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-center">Stock actual</th>
+                                <th class="text-right">P. Compra</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos %}
+                            <tr class="sz-prod-row"
+                                data-id="{{ producto.id }}"
+                                data-nombre="{{ producto.nombre }}"
+                                data-precio="{{ producto.precio_compra }}">
+                                <td>
+                                    <span class="sz-prod-nombre">{{ producto.nombre }}</span>
+                                    <small class="sz-prod-desc">{{ producto.categoria.nombre ?? '' }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="sz-stock-badge {% if producto.stock == 0 %}sz-badge--danger{% elseif producto.stock <= producto.stock_minimo %}sz-badge--warn{% else %}sz-badge--ok{% endif %}">
+                                        {{ producto.stock }}
+                                    </span>
+                                </td>
+                                <td class="text-right">${{ producto.precio_compra|number_format(2, '.', ',') }}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-sz btn-agregar-orden" type="button">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {# Orden #}
+        <div class="col-lg-5">
+            <div class="sz-dash-card animate-in" style="--delay:.1s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-file-invoice"></i> Orden de compra</span>
+                </div>
+
+                <div id="ordenItems">
+                    <div class="sz-empty" id="ordenVacia" style="padding:2rem">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block" style="color:var(--sz-border)"></i>
+                        Agrega productos a la orden
+                    </div>
+                </div>
+
+                <div class="p-3 border-top">
+                    <div class="sz-total-row sz-total-row--grande mb-3">
+                        <span>Total orden</span>
+                        <span id="ordenTotal">$0.00</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fecha_entrega">Fecha de entrega estimada</label>
+                        <input type="date" class="form-control" id="fecha_entrega" name="fecha_entrega"
+                               min="{{ "now"|date('Y-m-d') }}">
+                    </div>
+
+                    <button type="button" class="btn btn-sz btn-block" id="btnCrearOrden">
+                        <i class="fas fa-save mr-2"></i> Crear orden de compra
+                    </button>
+                    <a href="{{ ('proveedores/ordenes/' ~ proveedor.id)|url }}"
+                       class="btn btn-outline-secondary btn-block mt-2">Cancelar</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    const proveedorId = {{ proveedor.id }};
+    let orden = [];
+
+    // Buscar en tabla
+    $('#inputBuscarProducto').on('input', function () {
+        const q = $(this).val().toLowerCase();
+        $('#tablaProductos tbody tr').each(function () {
+            $(this).toggle($(this).text().toLowerCase().includes(q));
+        });
+    });
+
+    // Agregar producto a la orden
+    $(document).on('click', '.btn-agregar-orden', function () {
+        const row      = $(this).closest('tr');
+        const id       = parseInt(row.data('id'));
+        const nombre   = row.data('nombre');
+        const precio   = parseFloat(row.data('precio'));
+        const existente = orden.find(i => i.id === id);
+
+        if (existente) {
+            existente.cantidad++;
+        } else {
+            orden.push({ id, nombre, precio, cantidad: 1 });
+        }
+
+        renderOrden();
+    });
+
+    function renderOrden() {
+        if (!orden.length) {
+            $('#ordenItems').html('<div class="sz-empty" id="ordenVacia" style="padding:2rem"><i class="fas fa-inbox fa-2x mb-2 d-block" style="color:var(--sz-border)"></i>Agrega productos a la orden</div>');
+            $('#ordenTotal').text('$0.00');
+            return;
+        }
+
+        let html = '';
+        let total = 0;
+
+        orden.forEach((item, idx) => {
+            const sub = item.precio * item.cantidad;
+            total += sub;
+            html += `
+                <div class="sz-carrito-item">
+                    <div class="sz-ci-info">
+                        <span class="sz-ci-nombre">${item.nombre}</span>
+                        <span class="sz-ci-precio">$${item.precio.toFixed(2)} c/u</span>
+                    </div>
+                    <div class="sz-ci-controles">
+                        <button class="sz-ci-btn" onclick="cambiarCantidadOrden(${idx}, -1)"><i class="fas fa-minus"></i></button>
+                        <input type="number" class="sz-ci-cantidad" value="${item.cantidad}" min="1"
+                               onchange="setCantidadOrden(${idx}, this.value)">
+                        <button class="sz-ci-btn" onclick="cambiarCantidadOrden(${idx}, 1)"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <span class="sz-ci-subtotal">$${sub.toFixed(2)}</span>
+                    <button class="sz-ci-quitar" onclick="quitarOrden(${idx})"><i class="fas fa-times"></i></button>
+                </div>`;
+        });
+
+        $('#ordenItems').html(html);
+        $('#ordenTotal').text('$' + total.toLocaleString('es-MX', { minimumFractionDigits: 2 }));
+    }
+
+    window.cambiarCantidadOrden = function(idx, delta) {
+        orden[idx].cantidad += delta;
+        if (orden[idx].cantidad < 1) { orden.splice(idx, 1); }
+        renderOrden();
+    };
+
+    window.setCantidadOrden = function(idx, val) {
+        const n = parseInt(val);
+        orden[idx].cantidad = isNaN(n) || n < 1 ? 1 : n;
+        renderOrden();
+    };
+
+    window.quitarOrden = function(idx) {
+        orden.splice(idx, 1);
+        renderOrden();
+    };
+
+    // Crear orden
+    $('#btnCrearOrden').on('click', function () {
+        if (!orden.length) { alert('Agrega al menos un producto'); return; }
+
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Creando...');
+
+        $.ajax({
+            url: base_url('proveedores/guardarOrden'), method: 'POST',
+            data: {
+                proveedor_id:  proveedorId,
+                items:         JSON.stringify(orden.map(i => ({ id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad }))),
+                fecha_entrega: $('#fecha_entrega').val(),
+            },
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) redirect(res.href);
+                else alert(res.message || 'Error al crear la orden');
+            },
+            error: function () { alert('Error de conexión'); },
+            complete: function () {
+                $('#btnCrearOrden').prop('disabled', false)
+                    .html('<i class="fas fa-save mr-2"></i> Crear orden de compra');
+            }
+        });
+    });
+
+});
+</script>
+{% endblock %}

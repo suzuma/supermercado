@@ -1,0 +1,203 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Clientes</h1>
+            <p class="sz-dash-sub">{{ total }} cliente{{ total != 1 ? 's' : '' }} encontrado{{ total != 1 ? 's' : '' }}</p>
+        </div>
+        <a href="{{ 'clientes/formulario'|url }}" class="btn btn-sz">
+            <i class="fas fa-user-plus mr-2"></i> Nuevo cliente
+        </a>
+    </div>
+
+    {# Filtros #}
+    <div class="sz-filtros animate-in" style="--delay:.05s">
+        <form method="GET" action="{{ 'clientes'|url }}" class="sz-filtros-form">
+            <div class="sz-filtro-group">
+                <div class="sz-search-wrap">
+                    <i class="fas fa-search sz-search-icon"></i>
+                    <input type="text" name="busqueda" value="{{ busqueda }}"
+                           placeholder="Buscar por nombre, correo, teléfono o RFC..."
+                           class="sz-search-input">
+                </div>
+            </div>
+            <select name="filtro" class="sz-select" style="max-width:140px">
+                <option value="todos"    {% if filtro == 'todos'    %}selected{% endif %}>Todos</option>
+                <option value="activos"  {% if filtro == 'activos'  %}selected{% endif %}>Activos</option>
+                <option value="inactivos"{% if filtro == 'inactivos'%}selected{% endif %}>Inactivos</option>
+            </select>
+            <button type="submit" class="btn btn-sz">
+                <i class="fas fa-filter mr-1"></i> Filtrar
+            </button>
+            {% if busqueda %}
+            <a href="{{ 'clientes'|url }}" class="btn btn-outline-secondary">
+                <i class="fas fa-times mr-1"></i> Limpiar
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    {# Tabla #}
+    <div class="sz-dash-card animate-in" style="--delay:.1s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-users"></i> Lista de clientes</span>
+        </div>
+
+        {% if datos|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Teléfono</th>
+                        <th>RFC</th>
+                        <th class="text-center">Compras</th>
+                        <th class="text-center">Pedidos</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in datos %}
+                    <tr>
+                        <td>
+                            <div class="sz-emp-info">
+                                <div class="sz-emp-avatar">
+                                    {{ cliente.nombre|slice(0,1)|upper }}{{ cliente.apellido|slice(0,1)|upper }}
+                                </div>
+                                <div>
+                                    <span class="sz-prod-nombre">{{ cliente.nombre }} {{ cliente.apellido }}</span>
+                                    <small class="sz-prod-desc">{{ cliente.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ cliente.telefono ?? '—' }}</td>
+                        <td>
+                            {% if cliente.rfc %}
+                                <code class="sz-codigo">{{ cliente.rfc }}</code>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="sz-badge-cat">{{ cliente.ventas_count }} compras</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="sz-badge-cat">{{ cliente.pedidos_count }} pedidos</span>
+                        </td>
+                        <td class="text-center">
+                            {% if cliente.activo %}
+                                <span class="sz-stock-badge sz-badge--ok">Activo</span>
+                            {% else %}
+                                <span class="sz-stock-badge sz-badge--danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ ('clientes/perfil/' ~ cliente.id)|url }}"
+                               class="btn btn-sm btn-outline-secondary mr-1" title="Ver perfil">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ ('clientes/formulario/' ~ cliente.id)|url }}"
+                               class="btn btn-sm btn-outline-secondary mr-1" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if cliente.activo %}
+                            <button class="btn btn-sm btn-outline-danger btn-desactivar"
+                                    data-id="{{ cliente.id }}"
+                                    data-nombre="{{ cliente.nombre }} {{ cliente.apellido }}"
+                                    title="Desactivar">
+                                <i class="fas fa-user-slash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="sz-paginacion">
+            {% if pagina > 1 %}
+            <a href="{{ 'clientes'|url }}?pagina={{ pagina - 1 }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}" class="sz-page-btn"><i class="fas fa-chevron-left"></i></a>
+            {% endif %}
+            {% for i in 1..total_pages %}
+                {% if i == pagina %}
+                    <span class="sz-page-btn sz-page-btn--active">{{ i }}</span>
+                {% elseif i == 1 or i == total_pages or (i >= pagina - 2 and i <= pagina + 2) %}
+                    <a href="{{ 'clientes'|url }}?pagina={{ i }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}" class="sz-page-btn">{{ i }}</a>
+                {% elseif i == pagina - 3 or i == pagina + 3 %}
+                    <span class="sz-page-dots">…</span>
+                {% endif %}
+            {% endfor %}
+            {% if pagina < total_pages %}
+            <a href="{{ 'clientes'|url }}?pagina={{ pagina + 1 }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}" class="sz-page-btn"><i class="fas fa-chevron-right"></i></a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="sz-empty" style="padding:3rem">
+            <i class="fas fa-users fa-2x mb-3 d-block" style="color:var(--sz-border)"></i>
+            No se encontraron clientes
+            {% if busqueda %}<br><a href="{{ 'clientes'|url }}">Ver todos</a>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Modal desactivar #}
+<div class="modal fade" id="modalDesactivar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Desactivar cliente</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                ¿Desactivar a <strong id="nombreCliente"></strong>?
+                El cliente no podrá acceder a la tienda en línea.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarDesactivar">
+                    <i class="fas fa-user-slash mr-1"></i> Desactivar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    let idDesactivar = null;
+
+    $(document).on('click', '.btn-desactivar', function () {
+        idDesactivar = $(this).data('id');
+        $('#nombreCliente').text($(this).data('nombre'));
+        $('#modalDesactivar').modal('show');
+    });
+
+    $('#btnConfirmarDesactivar').on('click', function () {
+        if (!idDesactivar) return;
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>...');
+
+        $.ajax({
+            url: base_url('clientes/desactivar'), method: 'POST',
+            data: { id: idDesactivar }, dataType: 'json',
+            success: function (res) {
+                if (res.response) { $('#modalDesactivar').modal('hide'); location.reload(); }
+                else alert(res.message);
+            },
+            complete: function () {
+                $('#btnConfirmarDesactivar').prop('disabled', false)
+                    .html('<i class="fas fa-user-slash mr-1"></i> Desactivar');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

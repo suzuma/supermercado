@@ -1,0 +1,259 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">{{ cliente.nombre }} {{ cliente.apellido }}</h1>
+            <p class="sz-dash-sub">
+                <a href="{{ 'clientes'|url }}" class="sz-back-link">
+                    <i class="fas fa-arrow-left mr-1"></i> Volver a clientes
+                </a>
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ ('clientes/formulario/' ~ cliente.id)|url }}" class="btn btn-outline-secondary">
+                <i class="fas fa-edit mr-1"></i> Editar
+            </a>
+            {% if cliente.activo %}
+            <button class="btn btn-outline-danger" id="btnDesactivar">
+                <i class="fas fa-user-slash mr-1"></i> Desactivar
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+
+        {# Panel lateral — info del cliente #}
+        <div class="col-lg-4">
+
+            {# Perfil #}
+            <div class="sz-dash-card animate-in mb-3" style="--delay:.05s">
+                <div class="p-4 text-center">
+                    <div class="sz-emp-avatar-lg mx-auto mb-3">
+                        {{ cliente.nombre|slice(0,1)|upper }}{{ cliente.apellido|slice(0,1)|upper }}
+                    </div>
+                    <h5 class="mb-1">{{ cliente.nombre }} {{ cliente.apellido }}</h5>
+                    <p class="sz-prod-desc mb-2">{{ cliente.email }}</p>
+                    <span class="sz-stock-badge {% if cliente.activo %}sz-badge--ok{% else %}sz-badge--danger{% endif %}">
+                        {{ cliente.activo ? 'Activo' : 'Inactivo' }}
+                    </span>
+                </div>
+            </div>
+
+            {# Datos de contacto #}
+            <div class="sz-dash-card animate-in mb-3" style="--delay:.1s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-address-card"></i> Datos de contacto</span>
+                </div>
+                <div class="p-3">
+                    <div class="sz-info-row mb-2">
+                        <i class="fas fa-phone sz-info-icon"></i>
+                        <span>{{ cliente.telefono ?? 'Sin teléfono' }}</span>
+                    </div>
+                    <div class="sz-info-row mb-2">
+                        <i class="fas fa-map-marker-alt sz-info-icon"></i>
+                        <span>{{ cliente.direccion ?? 'Sin dirección' }}</span>
+                    </div>
+                    {% if cliente.fecha_nacimiento %}
+                    <div class="sz-info-row mb-2">
+                        <i class="fas fa-birthday-cake sz-info-icon"></i>
+                        <span>{{ cliente.fecha_nacimiento|date('d/m/Y') }}</span>
+                    </div>
+                    {% endif %}
+                    {% if cliente.rfc %}
+                    <div class="sz-info-row">
+                        <i class="fas fa-id-badge sz-info-icon"></i>
+                        <code class="sz-codigo">{{ cliente.rfc }}</code>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Estadísticas #}
+            <div class="sz-dash-card animate-in" style="--delay:.15s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-chart-bar"></i> Estadísticas</span>
+                </div>
+                <div class="p-3">
+                    <div class="sz-total-row mb-2">
+                        <span>Total compras</span>
+                        <strong>{{ estadisticas.total_compras }}</strong>
+                    </div>
+                    <div class="sz-total-row mb-2">
+                        <span>Ventas en caja</span>
+                        <strong>{{ estadisticas.total_ventas }}</strong>
+                    </div>
+                    <div class="sz-total-row mb-2">
+                        <span>Pedidos en línea</span>
+                        <strong>{{ estadisticas.total_pedidos }}</strong>
+                    </div>
+                    <div class="sz-total-row sz-total-row--grande">
+                        <span>Monto total</span>
+                        <span>{{ _cfg.simbolo }}{{ estadisticas.monto_total|number_format(2, '.', ',') }}</span>
+                    </div>
+                    {% if estadisticas.ultima_compra %}
+                    <p class="sz-prod-desc mt-2 mb-0">
+                        Última compra: {{ estadisticas.ultima_compra|date('d/m/Y') }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        {# Panel principal — historial #}
+        <div class="col-lg-8">
+
+            {# Historial de ventas en caja #}
+            <div class="sz-dash-card animate-in mb-3" style="--delay:.2s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-receipt"></i> Historial de compras en caja</span>
+                </div>
+                {% if ventas|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Folio</th>
+                                <th>Fecha</th>
+                                <th class="text-center">Forma de pago</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venta in ventas %}
+                            <tr>
+                                <td><code class="sz-codigo">#{{ venta.id|padLeft(5) }}</code></td>
+                                <td><small class="text-muted">{{ venta.created_at|date('d/m/Y H:i') }}</small></td>
+                                <td class="text-center">
+                                    <span class="sz-stock-badge sz-pago--{{ venta.tipo }}">
+                                        {{ venta.tipo|capitalize }}
+                                    </span>
+                                </td>
+                                <td class="text-right sz-venta-monto">
+                                    {{ _cfg.simbolo }}{{ venta.total|number_format(2, '.', ',') }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="sz-empty" style="padding:2rem">
+                    <i class="fas fa-receipt mr-2"></i> Sin compras en caja registradas
+                </div>
+                {% endif %}
+            </div>
+
+            {# Pedidos en línea #}
+            <div class="sz-dash-card animate-in" style="--delay:.25s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-shopping-bag"></i> Pedidos en línea</span>
+                </div>
+                {% if pedidos|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Folio</th>
+                                <th>Fecha</th>
+                                <th>Dirección</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-right">Total</th>
+                                <th class="text-center">Detalle</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pedido in pedidos %}
+                            <tr>
+                                <td><code class="sz-codigo">#{{ pedido.id|padLeft(5) }}</code></td>
+                                <td><small class="text-muted">{{ pedido.created_at|date('d/m/Y H:i') }}</small></td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ pedido.direccion_entrega|slice(0,35) }}{% if pedido.direccion_entrega|length > 35 %}...{% endif %}
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="sz-pedido-estado sz-estado--{{ pedido.estado }}">
+                                        {{ pedido.estado|capitalize }}
+                                    </span>
+                                </td>
+                                <td class="text-right sz-venta-monto">
+                                    {{ _cfg.simbolo }}{{ pedido.total|number_format(2, '.', ',') }}
+                                </td>
+                                <td class="text-center">
+                                    <a href="{{ ('pedidos/detalle/' ~ pedido.id)|url }}"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="sz-empty" style="padding:2rem">
+                    <i class="fas fa-shopping-bag mr-2"></i> Sin pedidos en línea
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{# Modal desactivar #}
+<div class="modal fade" id="modalDesactivar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Desactivar cliente</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                ¿Desactivar a <strong>{{ cliente.nombre }} {{ cliente.apellido }}</strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarDesactivar">
+                    <i class="fas fa-user-slash mr-1"></i> Desactivar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    $('#btnDesactivar').on('click', function () {
+        $('#modalDesactivar').modal('show');
+    });
+
+    $('#btnConfirmarDesactivar').on('click', function () {
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>...');
+
+        $.ajax({
+            url: base_url('clientes/desactivar'), method: 'POST',
+            data: { id: {{ cliente.id }} }, dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    $('#modalDesactivar').modal('hide');
+                    location.reload();
+                } else alert(res.message);
+            },
+            complete: function () {
+                $('#btnConfirmarDesactivar').prop('disabled', false)
+                    .html('<i class="fas fa-user-slash mr-1"></i> Desactivar');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

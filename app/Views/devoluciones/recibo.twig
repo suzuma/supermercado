@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Devolución D-{{ devolucion.id|padLeft(5) }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            width: 80mm;
+            margin: 0 auto;
+            padding: 8px;
+            color: #000;
+        }
+        .center  { text-align: center; }
+        .right   { text-align: right; }
+        .bold    { font-weight: bold; }
+        .sep     { border-top: 1px dashed #000; margin: 6px 0; }
+        .titulo  { font-size: 15px; font-weight: bold; margin-bottom: 2px; }
+        .row     { display: flex; justify-content: space-between; margin: 2px 0; }
+        .dev-tag { font-size: 11px; background: #eee; padding: 1px 4px; border-radius: 2px; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+
+<div class="center">
+    <div class="titulo">{{ _cfg.negocio_nombre }}</div>
+    <div>Tel: {{ _cfg.negocio_tel }}</div>
+</div>
+
+<div class="sep"></div>
+<div class="center bold" style="font-size:13px">COMPROBANTE DE DEVOLUCIÓN</div>
+<div class="sep"></div>
+
+<div class="row"><span>Folio dev.:</span><span class="bold">D-{{ devolucion.id|padLeft(5) }}</span></div>
+<div class="row"><span>Venta orig.:</span><span>#{{ devolucion.venta_id|padLeft(5) }}</span></div>
+<div class="row"><span>Fecha:</span><span>{{ devolucion.created_at|date('d/m/Y H:i') }}</span></div>
+<div class="row"><span>Procesó:</span><span>{{ devolucion.usuario.nombre ?? '—' }}</span></div>
+{% if devolucion.venta.cliente %}
+<div class="row"><span>Cliente:</span><span>{{ devolucion.venta.cliente.nombre }} {{ devolucion.venta.cliente.apellido }}</span></div>
+{% endif %}
+{% if devolucion.motivo %}
+<div class="row"><span>Motivo:</span><span style="max-width:55mm;text-align:right">{{ devolucion.motivo }}</span></div>
+{% endif %}
+
+<div class="sep"></div>
+<div class="row bold"><span>Artículo</span><span>Importe</span></div>
+<div class="sep"></div>
+
+{% for detalle in devolucion.detalles %}
+<div>{{ detalle.producto.nombre }}</div>
+<div class="row">
+    <span>&nbsp;&nbsp;{{ detalle.cantidad }} x {{ _cfg.simbolo }}{{ detalle.precio_unitario|number_format(2, '.', ',') }}</span>
+    <span>{{ _cfg.simbolo }}{{ detalle.subtotal|number_format(2, '.', ',') }}</span>
+</div>
+{% endfor %}
+
+<div class="sep"></div>
+<div class="row bold" style="font-size:13px">
+    <span>TOTAL REEMBOLSO</span>
+    <span>{{ _cfg.simbolo }}{{ devolucion.total_devuelto|number_format(2, '.', ',') }}</span>
+</div>
+<div class="sep"></div>
+
+<div class="center" style="margin-top:6px;font-size:10px">
+    <div>Conserve este comprobante</div>
+    <div style="margin-top:2px">{{ _cfg.negocio_nombre }}</div>
+</div>
+
+<br>
+<div class="center no-print" style="margin-top:12px">
+    <button onclick="window.print()" style="margin-right:8px">Imprimir</button>
+    <button onclick="window.close()">Cerrar</button>
+</div>
+
+<script>
+    window.onload = function () { window.print(); }
+</script>
+</body>
+</html>

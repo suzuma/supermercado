@@ -1,0 +1,495 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Configuración</h1>
+            <p class="sz-dash-sub">Ajustes generales del sistema</p>
+        </div>
+    </div>
+
+    {# Tabs de navegación #}
+    <div class="sz-config-tabs animate-in" style="--delay:.05s">
+        <button class="sz-config-tab sz-config-tab--active" data-tab="negocio">
+            <i class="fas fa-store mr-2"></i> Datos del negocio
+        </button>
+        <button class="sz-config-tab" data-tab="password">
+            <i class="fas fa-lock mr-2"></i> Cambiar contraseña
+        </button>
+        {% if isAdmin() %}
+        <button class="sz-config-tab" data-tab="usuarios">
+            <i class="fas fa-users-cog mr-2"></i> Usuarios del sistema
+        </button>
+        {% endif %}
+    </div>
+
+    {# TAB: Datos del negocio #}
+    <div class="sz-config-panel" id="tab-negocio">
+        <form id="formNegocio" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="sz-dash-card animate-in mb-3" style="--delay:.1s">
+                        <div class="sz-card-header">
+                            <span class="sz-card-title"><i class="fas fa-building"></i> Información del negocio</span>
+                        </div>
+                        <div class="p-4">
+                            <div class="form-group">
+                                <label for="negocio_nombre">Nombre del negocio *</label>
+                                <input type="text" class="form-control" id="negocio_nombre"
+                                       name="negocio_nombre" value="{{ config.negocio_nombre }}" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="negocio_telefono">Teléfono</label>
+                                        <input type="text" class="form-control" id="negocio_telefono"
+                                               name="negocio_telefono" value="{{ config.negocio_telefono }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="negocio_email">Correo</label>
+                                        <input type="email" class="form-control" id="negocio_email"
+                                               name="negocio_email" value="{{ config.negocio_email }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="negocio_direccion">Dirección</label>
+                                <input type="text" class="form-control" id="negocio_direccion"
+                                       name="negocio_direccion" value="{{ config.negocio_direccion }}">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="negocio_rfc">RFC</label>
+                                        <input type="text" class="form-control" id="negocio_rfc"
+                                               name="negocio_rfc" value="{{ config.negocio_rfc }}"
+                                               maxlength="13" style="text-transform:uppercase">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moneda">Moneda</label>
+                                        <select class="form-control" id="moneda" name="moneda">
+                                            <option value="MXN" {% if config.moneda == 'MXN' %}selected{% endif %}>MXN — Peso mexicano</option>
+                                            <option value="USD" {% if config.moneda == 'USD' %}selected{% endif %}>USD — Dólar americano</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="timezone">Zona horaria</label>
+                                <select class="form-control" id="timezone" name="timezone">
+                                    {% for tz in timezones %}
+                                    <option value="{{ tz }}" {% if config.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label for="ticket_mensaje">Mensaje en ticket de venta</label>
+                                <input type="text" class="form-control" id="ticket_mensaje"
+                                       name="ticket_mensaje" value="{{ config.ticket_mensaje }}"
+                                       placeholder="¡Gracias por su compra!">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="sz-dash-card animate-in mb-3" style="--delay:.15s">
+                        <div class="sz-card-header">
+                            <span class="sz-card-title"><i class="fas fa-image"></i> Logo del sistema</span>
+                        </div>
+                        <div class="p-4">
+                            <div class="sz-imagen-preview mb-3">
+                                {% if config.negocio_logo %}
+                                    <img src="{{ ('images/' ~ config.negocio_logo)|public }}"
+                                         id="logoPreview" alt="Logo">
+                                {% else %}
+                                    <div class="sz-imagen-placeholder" id="logoPlaceholder">
+                                        <i class="fas fa-image fa-3x"></i>
+                                        <span>Sin logo</span>
+                                    </div>
+                                    <img id="logoPreview" style="display:none" alt="Logo">
+                                {% endif %}
+                            </div>
+                            <label for="logo" class="sz-upload-btn">
+                                <i class="fas fa-upload mr-2"></i> Cambiar logo
+                            </label>
+                            <input type="file" id="logo" name="logo"
+                                   accept="image/jpeg,image/png,image/webp" class="d-none">
+                            <small class="text-muted d-block text-center mt-2">JPG, PNG o WebP · Máx. 2MB</small>
+                        </div>
+                    </div>
+
+                    <div class="sz-dash-card animate-in" style="--delay:.2s">
+                        <div class="p-3">
+                            <button type="submit" class="btn btn-sz btn-block" id="btnGuardarNegocio">
+                                <i class="fas fa-save mr-2"></i> Guardar cambios
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="alert alert-success mt-3 d-none" id="alertNegocio"></div>
+        <div class="alert alert-danger mt-3 d-none" id="alertNegocioError"></div>
+    </div>
+
+    {# TAB: Cambiar contraseña #}
+    <div class="sz-config-panel d-none" id="tab-password">
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="sz-dash-card animate-in" style="--delay:.1s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-key"></i> Cambiar contraseña</span>
+                    </div>
+                    <div class="p-4">
+                        <form id="formPassword">
+                            <div class="form-group">
+                                <label for="password_actual">Contraseña actual *</label>
+                                <input type="password" class="form-control" id="password_actual"
+                                       name="password_actual" placeholder="••••••••" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password_nueva">Nueva contraseña *</label>
+                                <input type="password" class="form-control" id="password_nueva"
+                                       name="password_nueva" placeholder="Mínimo 6 caracteres" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password_confirma">Confirmar nueva contraseña *</label>
+                                <input type="password" class="form-control" id="password_confirma"
+                                       name="password_confirma" placeholder="Repite la nueva contraseña" required>
+                            </div>
+                            <button type="submit" class="btn btn-sz btn-block" id="btnGuardarPassword">
+                                <i class="fas fa-lock mr-2"></i> Actualizar contraseña
+                            </button>
+                        </form>
+                        <div class="alert alert-success mt-3 d-none" id="alertPassword"></div>
+                        <div class="alert alert-danger mt-3 d-none" id="alertPasswordError"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# TAB: Usuarios del sistema #}
+    {% if isAdmin() %}
+    <div class="sz-config-panel d-none" id="tab-usuarios">
+        <div class="sz-dash-header mb-3" style="margin-bottom:.75rem!important">
+            <div></div>
+            <button class="btn btn-sz" id="btnNuevoUsuario">
+                <i class="fas fa-user-plus mr-2"></i> Nuevo usuario
+            </button>
+        </div>
+
+        <div class="sz-dash-card animate-in" style="--delay:.1s">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-users-cog"></i> Usuarios del sistema</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios %}
+                        <tr>
+                            <td>
+                                <div class="sz-emp-info">
+                                    <div class="sz-emp-avatar" style="width:32px;height:32px;font-size:.7rem">
+                                        {{ usuario.nombre|slice(0,1)|upper }}{{ usuario.apellido|slice(0,1)|upper }}
+                                    </div>
+                                    <div>
+                                        <span class="sz-prod-nombre">{{ usuario.nombre }} {{ usuario.apellido }}</span>
+                                        <small class="sz-prod-desc">{{ usuario.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="sz-badge-cat">{{ usuario.rol.nombre }}</span></td>
+                            <td class="text-center">
+                                {% if usuario.activo %}
+                                    <span class="sz-stock-badge sz-badge--ok">Activo</span>
+                                {% else %}
+                                    <span class="sz-stock-badge sz-badge--danger">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-secondary btn-editar-usuario mr-1"
+                                        data-id="{{ usuario.id }}"
+                                        data-nombre="{{ usuario.nombre }}"
+                                        data-apellido="{{ usuario.apellido }}"
+                                        data-email="{{ usuario.email }}"
+                                        data-rol="{{ usuario.rol_id }}"
+                                        data-activo="{{ usuario.activo }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% if usuario.id != user().id %}
+                                <button class="btn btn-sm btn-outline-danger btn-desactivar-usuario"
+                                        data-id="{{ usuario.id }}"
+                                        data-nombre="{{ usuario.nombre }} {{ usuario.apellido }}">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+{# Modal usuario #}
+<div class="modal fade" id="modalUsuario" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalUsuarioTitle">Nuevo usuario</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="formUsuario">
+                    <input type="hidden" id="usuario_id" name="id">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="u_nombre">Nombre *</label>
+                                <input type="text" class="form-control" id="u_nombre" name="nombre" required>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="u_apellido">Apellido *</label>
+                                <input type="text" class="form-control" id="u_apellido" name="apellido" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="u_email">Correo *</label>
+                        <input type="email" class="form-control" id="u_email" name="email" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="u_rol">Rol *</label>
+                                <select class="form-control" id="u_rol" name="rol_id" required>
+                                    <option value="1">Administrador</option>
+                                    <option value="2">Cajero</option>
+                                    <option value="3">Almacenista</option>
+                                    <option value="4">Repartidor</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="u_activo">Estado</label>
+                                <select class="form-control" id="u_activo" name="activo">
+                                    <option value="1">Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="u_password">Contraseña <span id="passRequired">*</span></label>
+                        <input type="password" class="form-control" id="u_password" name="password"
+                               placeholder="Mínimo 6 caracteres">
+                        <small class="text-muted" id="passHint" style="display:none">Dejar vacío para no cambiar</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sz" id="btnGuardarUsuario">
+                    <i class="fas fa-save mr-1"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Modal desactivar usuario #}
+<div class="modal fade" id="modalDesactivarUsuario" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Desactivar usuario</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                ¿Desactivar a <strong id="nombreUsuarioDesactivar"></strong>?
+                El usuario no podrá iniciar sesión.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarDesactivar">
+                    <i class="fas fa-user-slash mr-1"></i> Desactivar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    // ── Tabs ───────────────────────────────────────────────
+    $('.sz-config-tab').on('click', function () {
+        $('.sz-config-tab').removeClass('sz-config-tab--active');
+        $(this).addClass('sz-config-tab--active');
+        $('.sz-config-panel').addClass('d-none');
+        $('#tab-' + $(this).data('tab')).removeClass('d-none');
+    });
+
+    // ── Preview logo ───────────────────────────────────────
+    $('#logo').on('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            $('#logoPlaceholder').hide();
+            $('#logoPreview').attr('src', e.target.result).show();
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // ── Guardar negocio ────────────────────────────────────
+    $('#formNegocio').on('submit', function (e) {
+        e.preventDefault();
+        $('#alertNegocio, #alertNegocioError').addClass('d-none');
+        $('#btnGuardarNegocio').prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...');
+
+        $.ajax({
+            url: base_url('configuracion/negocio'), method: 'POST',
+            data: new FormData(this), processData: false, contentType: false,
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    $('#alertNegocio').text(res.message).removeClass('d-none');
+                } else {
+                    $('#alertNegocioError').text(res.message).removeClass('d-none');
+                }
+            },
+            complete: function () {
+                $('#btnGuardarNegocio').prop('disabled', false)
+                    .html('<i class="fas fa-save mr-2"></i> Guardar cambios');
+            }
+        });
+    });
+
+    // ── Cambiar contraseña ─────────────────────────────────
+    $('#formPassword').on('submit', function (e) {
+        e.preventDefault();
+        $('#alertPassword, #alertPasswordError').addClass('d-none');
+        $('#btnGuardarPassword').prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin mr-2"></i> Actualizando...');
+
+        $.ajax({
+            url: base_url('configuracion/password'), method: 'POST',
+            data: $(this).serialize(), dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    $('#alertPassword').text(res.message).removeClass('d-none');
+                    $('#formPassword')[0].reset();
+                } else {
+                    $('#alertPasswordError').text(res.message).removeClass('d-none');
+                }
+            },
+            complete: function () {
+                $('#btnGuardarPassword').prop('disabled', false)
+                    .html('<i class="fas fa-lock mr-2"></i> Actualizar contraseña');
+            }
+        });
+    });
+
+    // ── Modal nuevo usuario ────────────────────────────────
+    $('#btnNuevoUsuario').on('click', function () {
+        $('#modalUsuarioTitle').text('Nuevo usuario');
+        $('#formUsuario')[0].reset();
+        $('#usuario_id').val('');
+        $('#passRequired').show();
+        $('#passHint').hide();
+        $('#u_password').prop('required', true);
+        $('#modalUsuario').modal('show');
+    });
+
+    // ── Modal editar usuario ───────────────────────────────
+    $(document).on('click', '.btn-editar-usuario', function () {
+        const d = $(this).data();
+        $('#modalUsuarioTitle').text('Editar usuario');
+        $('#usuario_id').val(d.id);
+        $('#u_nombre').val(d.nombre);
+        $('#u_apellido').val(d.apellido);
+        $('#u_email').val(d.email);
+        $('#u_rol').val(d.rol);
+        $('#u_activo').val(d.activo);
+        $('#u_password').val('').prop('required', false);
+        $('#passRequired').hide();
+        $('#passHint').show();
+        $('#modalUsuario').modal('show');
+    });
+
+    // ── Guardar usuario ────────────────────────────────────
+    $('#btnGuardarUsuario').on('click', function () {
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...');
+
+        $.ajax({
+            url: base_url('configuracion/usuario'), method: 'POST',
+            data: $('#formUsuario').serialize(), dataType: 'json',
+            success: function (res) {
+                if (res.response) { $('#modalUsuario').modal('hide'); location.reload(); }
+                else alert(res.message);
+            },
+            complete: function () {
+                $('#btnGuardarUsuario').prop('disabled', false)
+                    .html('<i class="fas fa-save mr-1"></i> Guardar');
+            }
+        });
+    });
+
+    // ── Desactivar usuario ─────────────────────────────────
+    let idDesactivar = null;
+
+    $(document).on('click', '.btn-desactivar-usuario', function () {
+        idDesactivar = $(this).data('id');
+        $('#nombreUsuarioDesactivar').text($(this).data('nombre'));
+        $('#modalDesactivarUsuario').modal('show');
+    });
+
+    $('#btnConfirmarDesactivar').on('click', function () {
+        if (!idDesactivar) return;
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>...');
+
+        $.ajax({
+            url: base_url('configuracion/desactivarUsuario'), method: 'POST',
+            data: { id: idDesactivar }, dataType: 'json',
+            success: function (res) {
+                if (res.response) { $('#modalDesactivarUsuario').modal('hide'); location.reload(); }
+                else alert(res.message);
+            },
+            complete: function () {
+                $('#btnConfirmarDesactivar').prop('disabled', false)
+                    .html('<i class="fas fa-user-slash mr-1"></i> Desactivar');
+            }
+        });
+    });
+
+});
+</script>
+{% endblock %}

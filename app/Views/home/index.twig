@@ -1,0 +1,263 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">
+                {% if isAdmin() %}Panel de administración
+                {% elseif isSeller() %}Panel de caja
+                {% elseif isAnalyst() %}Panel de análisis
+                {% else %}Bienvenido{% endif %}
+            </h1>
+            <p class="sz-dash-sub">
+                Hola, <strong>{{ user().nombre }}</strong> &mdash; {{ user().rol }}
+                &nbsp;·&nbsp; {{ "now"|date("d/m/Y") }}
+            </p>
+        </div>
+        <div class="sz-dash-badge">
+            <i class="fas fa-circle sz-dot"></i> Sistema en línea
+        </div>
+    </div>
+
+    {# ── Tarjetas de métricas ─────────────────────────────── #}
+    <div class="sz-metrics">
+
+        {% if isAdmin() or isSeller() %}
+        <div class="sz-metric-card sz-metric--accent animate-in" style="--delay:.05s">
+            <div class="sz-metric-icon sz-icon--accent"><i class="fas fa-cash-register"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Ventas del día</span>
+                <span class="sz-metric-value">{{ _cfg.simbolo }}{{ ventas_dia|number_format(2, '.', ',') }}</span>
+                <span class="sz-metric-sub">{{ total_ventas_dia }} transacciones</span>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if isAdmin() or isSeller() %}
+        <div class="sz-metric-card animate-in" style="--delay:.08s">
+            <div class="sz-metric-icon" style="background:rgba(192,57,43,.12);color:#c0392b"><i class="fas fa-undo"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Devoluciones del día</span>
+                <span class="sz-metric-value" style="color:#c0392b">-{{ _cfg.simbolo }}{{ devoluciones_dia|number_format(2, '.', ',') }}</span>
+                <span class="sz-metric-sub">{{ total_devoluciones_dia }} transacciones</span>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if isAdmin() or isAnalyst() %}
+        <div class="sz-metric-card animate-in" style="--delay:.1s">
+            <div class="sz-metric-icon sz-icon--teal"><i class="fas fa-boxes"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Productos en inventario</span>
+                <span class="sz-metric-value">{{ total_productos }}</span>
+                <span class="sz-metric-sub {% if stock_bajo > 0 %}sz-metric-sub--warn{% endif %}">
+                    {% if stock_bajo > 0 %}
+                        <i class="fas fa-exclamation-triangle"></i> {{ stock_bajo }} con stock bajo
+                    {% else %}
+                        Todo en orden
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if isAdmin() %}
+        <div class="sz-metric-card animate-in" style="--delay:.15s">
+            <div class="sz-metric-icon sz-icon--purple"><i class="fas fa-users"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Empleados activos</span>
+                <span class="sz-metric-value">{{ empleados_activos }}</span>
+                <span class="sz-metric-sub">de {{ total_empleados }} registrados</span>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if isAdmin() or isAnalyst() %}
+        <div class="sz-metric-card animate-in" style="--delay:.2s">
+            <div class="sz-metric-icon sz-icon--coral"><i class="fas fa-shopping-bag"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Pedidos pendientes</span>
+                <span class="sz-metric-value">{{ pedidos_pendientes }}</span>
+                <span class="sz-metric-sub">en línea</span>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    {# ── Grid principal ───────────────────────────────────── #}
+    <div class="sz-dash-grid">
+
+        {# Gráfica de ventas #}
+        {% if isAdmin() or isAnalyst() %}
+        <div class="sz-dash-card sz-dash-card--wide animate-in" style="--delay:.25s">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-chart-line"></i> Ventas de la semana</span>
+                <span class="sz-card-hint">últimos 7 días</span>
+            </div>
+            <div class="sz-chart-wrap">
+                <canvas id="chartVentas"></canvas>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Alertas de stock bajo #}
+        {% if isAdmin() or isAnalyst() %}
+        <div class="sz-dash-card animate-in" style="--delay:.3s">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-exclamation-triangle"></i> Stock bajo</span>
+                <a href="{{ 'inventario'|url }}" class="sz-card-link">Ver todo</a>
+            </div>
+            <ul class="sz-stock-list">
+                {% if alertas_stock|length > 0 %}
+                    {% for producto in alertas_stock %}
+                    <li class="sz-stock-item">
+                        <div class="sz-stock-info">
+                            <span class="sz-stock-name">{{ producto.nombre }}</span>
+                            <span class="sz-stock-cat">{{ producto.categoria }}</span>
+                        </div>
+                        <span class="sz-stock-badge {% if producto.stock == 0 %}sz-badge--danger{% else %}sz-badge--warn{% endif %}">
+                            {{ producto.stock }} uds.
+                        </span>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="sz-empty">
+                        <i class="fas fa-check-circle"></i> Sin alertas de stock
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {# Últimas ventas #}
+        {% if isAdmin() or isSeller() %}
+        <div class="sz-dash-card animate-in" style="--delay:.35s">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-receipt"></i> Últimas ventas</span>
+                <a href="{{ 'ventas/historial'|url }}" class="sz-card-link">Ver todo</a>
+            </div>
+            <ul class="sz-ventas-list">
+                {% if ultimas_ventas|length > 0 %}
+                    {% for venta in ultimas_ventas %}
+                    <li class="sz-venta-item">
+                        <div class="sz-venta-info">
+                            <span class="sz-venta-id">#{{ venta.id|padLeft(5) }}</span>
+                            <span class="sz-venta-hora">{{ venta.created_at|date("H:i") }}</span>
+                        </div>
+                        <span class="sz-venta-monto">{{ _cfg.simbolo }}{{ venta.total|number_format(2, '.', ',') }}</span>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="sz-empty">
+                        <i class="fas fa-info-circle"></i> Sin ventas registradas hoy
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {# Pedidos recientes #}
+        {% if isAdmin() or isAnalyst() %}
+        <div class="sz-dash-card animate-in" style="--delay:.4s">
+            <div class="sz-card-header">
+                <span class="sz-card-title"><i class="fas fa-truck"></i> Pedidos recientes</span>
+                <a href="{{ 'pedidos'|url }}" class="sz-card-link">Ver todo</a>
+            </div>
+            <ul class="sz-pedidos-list">
+                {% if pedidos_recientes|length > 0 %}
+                    {% for pedido in pedidos_recientes %}
+                    <li class="sz-pedido-item">
+                        <div class="sz-pedido-info">
+                            <span class="sz-pedido-id">#{{ pedido.id|padLeft(5) }}</span>
+                            <span class="sz-pedido-cliente">{{ pedido.cliente }}</span>
+                        </div>
+                        <span class="sz-pedido-estado sz-estado--{{ pedido.estado }}">
+                            {{ pedido.estado }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="sz-empty">
+                        <i class="fas fa-info-circle"></i> Sin pedidos recientes
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+$(document).ready(function () {
+    const ctx = document.getElementById('chartVentas');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ ventas_labels|json_encode|raw }},
+            datasets: [
+                {
+                    label:                'Ventas',
+                    data:                 {{ ventas_datos|json_encode|raw }},
+                    borderColor:          '#1a6b2f',
+                    backgroundColor:      'rgba(26,107,47,.08)',
+                    borderWidth:          2,
+                    pointBackgroundColor: '#1a6b2f',
+                    pointRadius:          4,
+                    pointHoverRadius:     6,
+                    fill:    true,
+                    tension: 0.4,
+                },
+                {
+                    label:                'Devoluciones',
+                    data:                 {{ devoluciones_datos|json_encode|raw }},
+                    borderColor:          '#c0392b',
+                    backgroundColor:      'rgba(192,57,43,.06)',
+                    borderWidth:          2,
+                    borderDash:           [4, 3],
+                    pointBackgroundColor: '#c0392b',
+                    pointRadius:          3,
+                    pointHoverRadius:     5,
+                    fill:    true,
+                    tension: 0.4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top', labels: { font: { size: 12 }, color: '#6b7a6d', boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ' ' + ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString('es-MX', { minimumFractionDigits: 2 })
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid:  { color: 'rgba(0,0,0,.04)' },
+                    ticks: { font: { family: 'DM Sans', size: 12 }, color: '#6b7a6d' }
+                },
+                y: {
+                    grid:  { color: 'rgba(0,0,0,.04)' },
+                    ticks: {
+                        font: { family: 'DM Sans', size: 12 },
+                        color: '#6b7a6d',
+                        callback: v => '$' + v.toLocaleString('es-MX')
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'partials/tienda_layout.twig' %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="sz-section-title">Mis pedidos</h2>
+    <p class="text-muted">Hola, <strong>{{ cliente.nombre }}</strong> — aquí puedes ver el estado de tus pedidos.</p>
+
+    {% if pedidos|length > 0 %}
+    <div class="row">
+        {% for pedido in pedidos %}
+        <div class="col-12 mb-3">
+            <div class="sz-tienda-card">
+                <div class="sz-tienda-card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Pedido <code class="sz-codigo">#{{ pedido.id|padLeft(5) }}</code></h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-muted">{{ pedido.created_at|date('d/m/Y H:i') }}</small>
+                        <span class="sz-pedido-estado sz-estado--{{ pedido.estado }}">{{ pedido.estado|capitalize }}</span>
+                    </div>
+                </div>
+                <div class="p-3">
+                    {# Timeline #}
+                    <div class="sz-timeline mb-3">
+                        {% set estados = ['pendiente', 'confirmado', 'enviado', 'entregado'] %}
+                        {% for est in estados %}
+                        {% set activo = (
+                            est == 'pendiente' or
+                            (est == 'confirmado' and pedido.estado in ['confirmado','enviado','entregado']) or
+                            (est == 'enviado'    and pedido.estado in ['enviado','entregado']) or
+                            (est == 'entregado'  and pedido.estado == 'entregado')
+                        ) %}
+                        <div class="sz-timeline-item {% if activo %}sz-timeline-item--done{% endif %} {% if est == pedido.estado %}sz-timeline-item--current{% endif %}">
+                            <div class="sz-timeline-dot">{% if activo %}<i class="fas fa-check"></i>{% endif %}</div>
+                            <div class="sz-timeline-label">{{ est|capitalize }}</div>
+                        </div>
+                        {% if not loop.last %}
+                        <div class="sz-timeline-line {% if activo %}sz-timeline-line--done{% endif %}"></div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    {# Productos #}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                {% for det in pedido.detalles %}
+                                <tr>
+                                    <td>{{ det.producto.nombre }}</td>
+                                    <td class="text-center">x{{ det.cantidad }}</td>
+                                    <td class="text-right">{{ _cfg.simbolo }}{{ det.subtotal|number_format(2, '.', ',') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="2" class="text-right font-weight-bold">Total</td>
+                                    <td class="text-right font-weight-bold">{{ _cfg.simbolo }}{{ pedido.total|number_format(2, '.', ',') }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-box-open fa-3x mb-3" style="color:var(--sz-border)"></i>
+        <p class="text-muted">Aún no tienes pedidos</p>
+        <a href="{{ 'tienda/catalogo'|url }}" class="btn btn-sz mt-2">
+            <i class="fas fa-store mr-2"></i> Ir al catálogo
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

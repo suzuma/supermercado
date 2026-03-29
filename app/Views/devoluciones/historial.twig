@@ -1,0 +1,104 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Historial de devoluciones</h1>
+            <p class="sz-dash-sub">{{ total }} devolución{{ total != 1 ? 'es' : '' }} el {{ fecha|date('d/m/Y') }}</p>
+        </div>
+        <a href="{{ 'devoluciones'|url }}" class="btn btn-sz">
+            <i class="fas fa-undo mr-2"></i> Nueva devolución
+        </a>
+    </div>
+
+    <div class="sz-filtros animate-in mb-3" style="--delay:.05s">
+        <form method="GET" action="{{ 'devoluciones/historial'|url }}" class="sz-filtros-form">
+            <label style="font-size:.82rem;font-weight:500;color:var(--sz-ink);margin:0">Fecha:</label>
+            <input type="date" name="fecha" value="{{ fecha }}" class="form-control" style="width:auto">
+            <button type="submit" class="btn btn-sz">
+                <i class="fas fa-search mr-1"></i> Ver
+            </button>
+        </form>
+    </div>
+
+    <div class="sz-dash-card animate-in" style="--delay:.1s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-undo"></i> Devoluciones</span>
+        </div>
+
+        {% if datos|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Folio dev.</th>
+                        <th>Venta</th>
+                        <th>Hora</th>
+                        <th>Procesó</th>
+                        <th>Motivo</th>
+                        <th class="text-right">Reembolso</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dev in datos %}
+                    <tr>
+                        <td><code class="sz-codigo">D-{{ dev.id|padLeft(5) }}</code></td>
+                        <td>
+                            <a href="{{ ('ventas/ticket/' ~ dev.venta_id)|url }}" target="_blank"
+                               class="text-muted" style="font-size:.9rem">
+                                #{{ dev.venta_id|padLeft(5) }}
+                            </a>
+                        </td>
+                        <td>{{ dev.created_at|date('H:i') }}</td>
+                        <td>{{ dev.usuario.nombre ?? '—' }}</td>
+                        <td class="text-muted" style="font-size:.88rem">{{ dev.motivo ?? '—' }}</td>
+                        <td class="text-right" style="color:#c0392b;font-weight:600">
+                            -{{ _cfg.simbolo }}{{ dev.total_devuelto|number_format(2, '.', ',') }}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ ('devoluciones/recibo/' ~ dev.id)|url }}" target="_blank"
+                               class="btn btn-sm btn-outline-secondary" title="Ver recibo">
+                                <i class="fas fa-file-alt"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="sz-paginacion">
+            {% if pagina > 1 %}
+            <a href="{{ 'devoluciones/historial'|url }}?pagina={{ pagina - 1 }}&fecha={{ fecha }}" class="sz-page-btn">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            {% for i in 1..total_pages %}
+                {% if i == pagina %}
+                    <span class="sz-page-btn sz-page-btn--active">{{ i }}</span>
+                {% elseif i == 1 or i == total_pages or (i >= pagina - 2 and i <= pagina + 2) %}
+                    <a href="{{ 'devoluciones/historial'|url }}?pagina={{ i }}&fecha={{ fecha }}" class="sz-page-btn">{{ i }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if pagina < total_pages %}
+            <a href="{{ 'devoluciones/historial'|url }}?pagina={{ pagina + 1 }}&fecha={{ fecha }}" class="sz-page-btn">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="sz-empty" style="padding:3rem">
+            <i class="fas fa-undo fa-2x mb-3 d-block" style="color:var(--sz-border)"></i>
+            Sin devoluciones registradas para esta fecha
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

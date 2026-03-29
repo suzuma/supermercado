@@ -1,0 +1,35 @@
+{% extends "partials/new_layout.twig" %}
+{% block content %}
+<div id="login">
+    <div class="text-center card card-body bg-light">
+        <h3>Libreria Patito</h3>
+    </div>
+    <br><br>
+
+    <div class="row">
+        <div class="col-md-4"></div>
+        <div class="col-md-4">
+            <div class="login-panel panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title text-center">Autenticación</h3>
+                </div>
+                <div class="panel-body">
+                    <form role="form" method="post" action="{{ 'auth/signin'|url }}">
+                        <div class="alert-container"></div>
+                        <div class="form-group">
+                            <input class="form-control" placeholder="E-mail" name="email" type="email" autofocus="" />
+                            <span data-key="email" class="form-validation-failed"></span>
+                        </div>
+                        <div class="form-group">
+                            <input class="form-control" placeholder="Contraseña" name="password" type="password" value="" />
+                            <span data-key="password" class="form-validation-failed"></span>
+                        </div>
+                        <button data-ajax="true" type="submit" class="btn btn-lg btn-success btn-block">Ingresar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4"></div>
+    </div>
+</div>
+{% endblock %}

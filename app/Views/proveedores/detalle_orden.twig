@@ -1,0 +1,134 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Orden #{{ orden.id|padLeft(5) }}</h1>
+            <p class="sz-dash-sub">
+                <a href="{{ ('proveedores/ordenes/' ~ orden.proveedor_id)|url }}" class="sz-back-link">
+                    <i class="fas fa-arrow-left mr-1"></i> Volver a órdenes
+                </a>
+            </p>
+        </div>
+        <span class="sz-pedido-estado sz-estado-orden--{{ orden.estado }}" style="font-size:.9rem;padding:6px 16px">
+            {{ orden.estado|capitalize }}
+        </span>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="sz-dash-card animate-in" style="--delay:.05s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-boxes"></i> Productos ordenados</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-center">Cantidad</th>
+                                <th class="text-right">Precio u.</th>
+                                <th class="text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detalle in orden.detalles %}
+                            <tr>
+                                <td><span class="sz-prod-nombre">{{ detalle.producto.nombre }}</span></td>
+                                <td class="text-center">{{ detalle.cantidad }}</td>
+                                <td class="text-right">${{ detalle.precio_unitario|number_format(2, '.', ',') }}</td>
+                                <td class="text-right sz-venta-monto">${{ detalle.subtotal|number_format(2, '.', ',') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-right font-weight-bold">Total</td>
+                                <td class="text-right sz-venta-monto" style="font-size:1.1rem">
+                                    ${{ orden.total|number_format(2, '.', ',') }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="sz-dash-card animate-in" style="--delay:.1s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title"><i class="fas fa-info-circle"></i> Información</span>
+                </div>
+                <div class="p-3">
+                    <div class="sz-info-row mb-2">
+                        <span class="sz-info-label">Proveedor</span>
+                        <span>{{ orden.proveedor.nombre }}</span>
+                    </div>
+                    <div class="sz-info-row mb-2">
+                        <span class="sz-info-label">Creada por</span>
+                        <span>{{ orden.usuario.nombre ?? '—' }}</span>
+                    </div>
+                    <div class="sz-info-row mb-2">
+                        <span class="sz-info-label">Fecha</span>
+                        <span>{{ orden.created_at|date('d/m/Y H:i') }}</span>
+                    </div>
+                    {% if orden.fecha_entrega %}
+                    <div class="sz-info-row mb-2">
+                        <span class="sz-info-label">Entrega est.</span>
+                        <span>{{ orden.fecha_entrega|date('d/m/Y') }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="sz-info-row mb-3">
+                        <span class="sz-info-label">Estado</span>
+                        <span class="sz-pedido-estado sz-estado-orden--{{ orden.estado }}">{{ orden.estado|capitalize }}</span>
+                    </div>
+
+                    {% if orden.estado == 'pendiente' %}
+                    <button class="btn btn-sz btn-block" id="btnRecibir">
+                        <i class="fas fa-check mr-2"></i> Marcar como recibida
+                    </button>
+                    <button class="btn btn-outline-danger btn-block mt-2" id="btnCancelar">
+                        <i class="fas fa-ban mr-1"></i> Cancelar orden
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    const ordenId = {{ orden.id }};
+
+    function cambiarEstado(estado, btn) {
+        btn.prop('disabled', true);
+        $.ajax({
+            url: base_url('proveedores/estadoOrden'), method: 'POST',
+            data: { id: ordenId, estado }, dataType: 'json',
+            success: function (res) {
+                if (res.response) location.reload();
+                else alert(res.message);
+            },
+            complete: function () { btn.prop('disabled', false); }
+        });
+    }
+
+    $('#btnRecibir').on('click', function () {
+        if (confirm('¿Confirmar recepción? El stock se actualizará automáticamente.')) {
+            cambiarEstado('recibida', $(this));
+        }
+    });
+
+    $('#btnCancelar').on('click', function () {
+        if (confirm('¿Cancelar esta orden de compra?')) {
+            cambiarEstado('cancelada', $(this));
+        }
+    });
+});
+</script>
+{% endblock %}

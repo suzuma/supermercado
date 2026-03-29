@@ -1,0 +1,40 @@
+{% extends 'partials/tienda_layout.twig' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div class="sz-exito-icon mx-auto mb-4" style="width:80px;height:80px;font-size:2.5rem">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 class="sz-section-title">¡Pedido confirmado!</h2>
+            <p class="text-muted">Tu pedido <strong>#{{ pedido.id|padLeft(5) }}</strong> ha sido recibido y está siendo procesado.</p>
+
+            <div class="sz-tienda-card my-4 text-left">
+                <div class="sz-tienda-card-header">
+                    <h6 class="mb-0">Detalle del pedido</h6>
+                </div>
+                <div class="p-3">
+                    {% for detalle in pedido.detalles %}
+                    <div class="sz-total-row">
+                        <span>{{ detalle.producto.nombre }} x{{ detalle.cantidad }}</span>
+                        <span>{{ _cfg.simbolo }}{{ detalle.subtotal|number_format(2, '.', ',') }}</span>
+                    </div>
+                    {% endfor %}
+                    <div class="sz-total-row sz-total-row--grande mt-2">
+                        <span>Total</span>
+                        <span>{{ _cfg.simbolo }}{{ pedido.total|number_format(2, '.', ',') }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <a href="{{ 'tienda/seguimiento'|url }}" class="btn btn-sz mr-2">
+                <i class="fas fa-box mr-2"></i> Seguir mi pedido
+            </a>
+            <a href="{{ 'tienda'|url }}" class="btn btn-outline-secondary">
+                Seguir comprando
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

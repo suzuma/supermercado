@@ -1,0 +1,255 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Corte de caja</h1>
+            <p class="sz-dash-sub">Cierre de turno — {{ "now"|date("d/m/Y H:i") }}</p>
+        </div>
+        <a href="{{ 'corte-caja/historial'|url }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-history mr-1"></i> Historial de cortes
+        </a>
+    </div>
+
+    {% if pendientes.num_ventas == 0 %}
+
+    {# Sin ventas pendientes #}
+    <div class="sz-dash-card animate-in text-center py-5" style="--delay:.05s">
+        <i class="fas fa-check-circle fa-3x mb-3" style="color:var(--sz-success)"></i>
+        <h4 class="sz-dash-title mb-2">No hay ventas pendientes</h4>
+        <p class="text-muted">Todas las ventas ya fueron incluidas en un corte anterior.</p>
+        <a href="{{ 'corte-caja/historial'|url }}" class="btn btn-sz mt-2">
+            <i class="fas fa-history mr-2"></i> Ver historial
+        </a>
+    </div>
+
+    {% else %}
+
+    <div class="row">
+
+        {# Columna izquierda — resumen de ventas #}
+        <div class="col-lg-5 mb-4">
+            <div class="sz-dash-card animate-in h-100" style="--delay:.05s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title">
+                        <i class="fas fa-receipt"></i> Ventas pendientes de corte
+                    </span>
+                </div>
+                <div class="p-4">
+
+                    {# Desglose por forma de pago #}
+                    <div class="sz-corte-desglose">
+
+                        <div class="sz-corte-fila sz-corte-fila--efectivo">
+                            <div class="sz-corte-fila-icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                            <div class="sz-corte-fila-info">
+                                <span class="sz-corte-fila-label">Efectivo</span>
+                                <small class="text-muted">{{ pendientes.desglose.efectivo.count }} venta{{ pendientes.desglose.efectivo.count != 1 ? 's' : '' }}</small>
+                            </div>
+                            <span class="sz-corte-fila-monto" id="totalEfectivoSistema">
+                                {{ _cfg.simbolo }}{{ pendientes.desglose.efectivo.total|number_format(2, '.', ',') }}
+                            </span>
+                        </div>
+
+                        <div class="sz-corte-fila sz-corte-fila--tarjeta">
+                            <div class="sz-corte-fila-icon">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <div class="sz-corte-fila-info">
+                                <span class="sz-corte-fila-label">Tarjeta</span>
+                                <small class="text-muted">{{ pendientes.desglose.tarjeta.count }} venta{{ pendientes.desglose.tarjeta.count != 1 ? 's' : '' }}</small>
+                            </div>
+                            <span class="sz-corte-fila-monto">
+                                {{ _cfg.simbolo }}{{ pendientes.desglose.tarjeta.total|number_format(2, '.', ',') }}
+                            </span>
+                        </div>
+
+                        <div class="sz-corte-fila sz-corte-fila--transferencia">
+                            <div class="sz-corte-fila-icon">
+                                <i class="fas fa-university"></i>
+                            </div>
+                            <div class="sz-corte-fila-info">
+                                <span class="sz-corte-fila-label">Transferencia</span>
+                                <small class="text-muted">{{ pendientes.desglose.transferencia.count }} venta{{ pendientes.desglose.transferencia.count != 1 ? 's' : '' }}</small>
+                            </div>
+                            <span class="sz-corte-fila-monto">
+                                {{ _cfg.simbolo }}{{ pendientes.desglose.transferencia.total|number_format(2, '.', ',') }}
+                            </span>
+                        </div>
+
+                        <div class="sz-corte-total">
+                            <span>Total {{ pendientes.num_ventas }} venta{{ pendientes.num_ventas != 1 ? 's' : '' }}</span>
+                            <strong>{{ _cfg.simbolo }}{{ pendientes.total_ventas|number_format(2, '.', ',') }}</strong>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        {# Columna derecha — arqueo de efectivo #}
+        <div class="col-lg-7 mb-4">
+            <div class="sz-dash-card animate-in" style="--delay:.1s">
+                <div class="sz-card-header">
+                    <span class="sz-card-title">
+                        <i class="fas fa-calculator"></i> Arqueo de efectivo
+                    </span>
+                </div>
+                <div class="p-4">
+
+                    <div class="sz-arqueo-grid">
+
+                        <div class="form-group">
+                            <label for="fondoInicial">Fondo inicial (apertura de caja)</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text sz-input-prefix">{{ _cfg.simbolo }}</span>
+                                </div>
+                                <input type="number" class="form-control" id="fondoInicial"
+                                       step="0.01" min="0" value="0" placeholder="0.00">
+                            </div>
+                            <small class="text-muted">Dinero con el que se abrió la caja este turno.</small>
+                        </div>
+
+                        {# Resumen calculado #}
+                        <div class="sz-arqueo-resumen">
+                            <div class="sz-arqueo-linea">
+                                <span>Fondo inicial</span>
+                                <span id="resumenFondo">{{ _cfg.simbolo }}0.00</span>
+                            </div>
+                            <div class="sz-arqueo-linea">
+                                <span>+ Ventas en efectivo</span>
+                                <span>{{ _cfg.simbolo }}{{ pendientes.desglose.efectivo.total|number_format(2, '.', ',') }}</span>
+                            </div>
+                            <div class="sz-arqueo-linea sz-arqueo-linea--total">
+                                <span>= Esperado en caja</span>
+                                <strong id="resumenEsperado">
+                                    {{ _cfg.simbolo }}{{ pendientes.desglose.efectivo.total|number_format(2, '.', ',') }}
+                                </strong>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label for="efectivoContado">Efectivo contado (físico en caja)</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text sz-input-prefix">{{ _cfg.simbolo }}</span>
+                                </div>
+                                <input type="number" class="form-control" id="efectivoContado"
+                                       step="0.01" min="0" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        {# Diferencia #}
+                        <div class="sz-arqueo-diferencia" id="diferenciaBox" style="display:none">
+                            <div class="sz-arqueo-dif-label">Diferencia</div>
+                            <div class="sz-arqueo-dif-monto" id="diferenciaValor">{{ _cfg.simbolo }}0.00</div>
+                            <div class="sz-arqueo-dif-estado" id="diferenciaEstado"></div>
+                        </div>
+
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label for="observaciones">Observaciones <small class="text-muted">(opcional)</small></label>
+                        <textarea class="form-control" id="observaciones" rows="2"
+                                  placeholder="Ej: Se encontraron $10 de diferencia por error en cambio."></textarea>
+                    </div>
+
+                    <button class="btn btn-sz btn-block mt-3" id="btnConfirmarCorte">
+                        <i class="fas fa-cash-register mr-2"></i> Confirmar corte de caja
+                    </button>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    const totalEfectivoSistema = {{ pendientes.desglose.efectivo.total }};
+    const simbolo = _SIMBOLO_;
+
+    function recalcular() {
+        const fondo    = parseFloat($('#fondoInicial').val())     || 0;
+        const contado  = parseFloat($('#efectivoContado').val());
+        const esperado = fondo + totalEfectivoSistema;
+
+        $('#resumenFondo').text(simbolo + fondo.toFixed(2));
+        $('#resumenEsperado').text(simbolo + esperado.toFixed(2));
+
+        if ($('#efectivoContado').val() !== '') {
+            const diff = contado - esperado;
+            $('#diferenciaValor').text((diff >= 0 ? '+' : '') + simbolo + diff.toFixed(2));
+            $('#diferenciaBox')
+                .show()
+                .removeClass('sz-arqueo-dif--ok sz-arqueo-dif--mal sz-arqueo-dif--neutro');
+
+            if (diff === 0) {
+                $('#diferenciaBox').addClass('sz-arqueo-dif--ok');
+                $('#diferenciaEstado').text('Cuadra perfectamente ✓');
+            } else if (diff > 0) {
+                $('#diferenciaBox').addClass('sz-arqueo-dif--mal');
+                $('#diferenciaEstado').text('Sobrante en caja');
+            } else {
+                $('#diferenciaBox').addClass('sz-arqueo-dif--mal');
+                $('#diferenciaEstado').text('Faltante en caja');
+            }
+        } else {
+            $('#diferenciaBox').hide();
+        }
+    }
+
+    $('#fondoInicial, #efectivoContado').on('input', recalcular);
+
+    $('#btnConfirmarCorte').on('click', function () {
+        const efectivoContado = $('#efectivoContado').val();
+
+        if (efectivoContado === '') {
+            alert('Ingresa el efectivo contado para continuar.');
+            $('#efectivoContado').focus();
+            return;
+        }
+
+        $(this).prop('disabled', true)
+               .html('<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
+
+        $.ajax({
+            url:      base_url('corte-caja/registrar'),
+            method:   'POST',
+            dataType: 'json',
+            data: {
+                fondo_inicial:    $('#fondoInicial').val()    || 0,
+                efectivo_contado: efectivoContado,
+                observaciones:    $('#observaciones').val(),
+            },
+            success: function (res) {
+                if (res.response) {
+                    redirect(res.href);
+                } else {
+                    alert(res.message || 'Error al registrar el corte');
+                    $('#btnConfirmarCorte').prop('disabled', false)
+                        .html('<i class="fas fa-cash-register mr-2"></i> Confirmar corte de caja');
+                }
+            },
+            error: function () {
+                alert('Error de conexión');
+                $('#btnConfirmarCorte').prop('disabled', false)
+                    .html('<i class="fas fa-cash-register mr-2"></i> Confirmar corte de caja');
+            }
+        });
+    });
+
+});
+</script>
+{% endblock %}

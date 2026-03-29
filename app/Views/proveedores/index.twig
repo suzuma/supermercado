@@ -1,0 +1,181 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Proveedores</h1>
+            <p class="sz-dash-sub">{{ total }} proveedor{{ total != 1 ? 'es' : '' }} activo{{ total != 1 ? 's' : '' }}</p>
+        </div>
+        <a href="{{ 'proveedores/formulario'|url }}" class="btn btn-sz">
+            <i class="fas fa-plus mr-2"></i> Nuevo proveedor
+        </a>
+    </div>
+
+    {# Filtros #}
+    <div class="sz-filtros animate-in" style="--delay:.05s">
+        <form method="GET" action="{{ 'proveedores'|url }}" class="sz-filtros-form">
+            <div class="sz-filtro-group">
+                <div class="sz-search-wrap">
+                    <i class="fas fa-search sz-search-icon"></i>
+                    <input type="text" name="busqueda" value="{{ busqueda }}"
+                           placeholder="Buscar por nombre, contacto, RFC o correo..."
+                           class="sz-search-input">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-sz">
+                <i class="fas fa-filter mr-1"></i> Buscar
+            </button>
+            {% if busqueda %}
+            <a href="{{ 'proveedores'|url }}" class="btn btn-outline-secondary">
+                <i class="fas fa-times mr-1"></i> Limpiar
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    {# Tabla #}
+    <div class="sz-dash-card animate-in" style="--delay:.1s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-truck-loading"></i> Lista de proveedores</span>
+        </div>
+
+        {% if datos|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Proveedor</th>
+                        <th>Contacto</th>
+                        <th>Teléfono</th>
+                        <th>RFC</th>
+                        <th class="text-center">Productos</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prov in datos %}
+                    <tr>
+                        <td>
+                            <div class="sz-prov-info">
+                                <div class="sz-prov-avatar">
+                                    {{ prov.nombre|slice(0,2)|upper }}
+                                </div>
+                                <div>
+                                    <span class="sz-prod-nombre">{{ prov.nombre }}</span>
+                                    <small class="sz-prod-desc">{{ prov.email ?? '—' }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ prov.contacto ?? '—' }}</td>
+                        <td>{{ prov.telefono ?? '—' }}</td>
+                        <td><code class="sz-codigo">{{ prov.rfc ?? '—' }}</code></td>
+                        <td class="text-center">
+                            <span class="sz-badge-cat">{{ prov.productos_count ?? prov.productos|length }} productos</span>
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ ('proveedores/ordenes/' ~ prov.id)|url }}"
+                               class="btn btn-sm btn-outline-secondary mr-1" title="Ver órdenes">
+                                <i class="fas fa-file-invoice"></i>
+                            </a>
+                            <a href="{{ ('proveedores/formulario/' ~ prov.id)|url }}"
+                               class="btn btn-sm btn-outline-secondary mr-1" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger btn-desactivar"
+                                    data-id="{{ prov.id }}"
+                                    data-nombre="{{ prov.nombre }}"
+                                    title="Desactivar">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="sz-paginacion">
+            {% if pagina > 1 %}
+            <a href="{{ 'proveedores'|url }}?pagina={{ pagina - 1 }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}" class="sz-page-btn"><i class="fas fa-chevron-left"></i></a>
+            {% endif %}
+            {% for i in 1..total_pages %}
+                {% if i == pagina %}
+                    <span class="sz-page-btn sz-page-btn--active">{{ i }}</span>
+                {% elseif i == 1 or i == total_pages or (i >= pagina - 2 and i <= pagina + 2) %}
+                    <a href="{{ 'proveedores'|url }}?pagina={{ i }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}" class="sz-page-btn">{{ i }}</a>
+                {% elseif i == pagina - 3 or i == pagina + 3 %}
+                    <span class="sz-page-dots">…</span>
+                {% endif %}
+            {% endfor %}
+            {% if pagina < total_pages %}
+            <a href="{{ 'proveedores'|url }}?pagina={{ pagina + 1 }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}" class="sz-page-btn"><i class="fas fa-chevron-right"></i></a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="sz-empty" style="padding:3rem">
+            <i class="fas fa-truck fa-2x mb-3 d-block" style="color:var(--sz-border)"></i>
+            No se encontraron proveedores
+            {% if busqueda %}<a href="{{ 'proveedores'|url }}">Ver todos</a>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Modal desactivar #}
+<div class="modal fade" id="modalDesactivar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Desactivar proveedor</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                ¿Deseas desactivar a <strong id="nombreProveedor"></strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarDesactivar">
+                    <i class="fas fa-ban mr-1"></i> Desactivar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    let idDesactivar = null;
+
+    $(document).on('click', '.btn-desactivar', function () {
+        idDesactivar = $(this).data('id');
+        $('#nombreProveedor').text($(this).data('nombre'));
+        $('#modalDesactivar').modal('show');
+    });
+
+    $('#btnConfirmarDesactivar').on('click', function () {
+        if (!idDesactivar) return;
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Desactivando...');
+
+        $.ajax({
+            url: base_url('proveedores/desactivar'), method: 'POST',
+            data: { id: idDesactivar }, dataType: 'json',
+            success: function (res) {
+                if (res.response) { $('#modalDesactivar').modal('hide'); location.reload(); }
+                else alert(res.message);
+            },
+            complete: function () {
+                $('#btnConfirmarDesactivar').prop('disabled', false)
+                    .html('<i class="fas fa-ban mr-1"></i> Desactivar');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

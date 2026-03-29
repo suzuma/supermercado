@@ -1,0 +1,788 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-caja">
+
+    {# Panel izquierdo — búsqueda de productos #}
+    <div class="sz-caja-productos">
+
+        <div class="sz-caja-header">
+            <h2 class="sz-caja-title">Punto de venta</h2>
+            <a href="{{ 'ventas/historial'|url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-history mr-1"></i> Historial
+            </a>
+        </div>
+
+        {# Búsqueda #}
+        <div class="sz-caja-busqueda">
+            <div class="sz-caja-tipo-busqueda">
+                <button class="sz-tipo-btn sz-tipo-btn--active" id="btnBuscarNombre" data-tipo="nombre">
+                    <i class="fas fa-search mr-1"></i> Por nombre
+                </button>
+                <button class="sz-tipo-btn" id="btnBuscarCodigo" data-tipo="codigo">
+                    <i class="fas fa-barcode mr-1"></i> Por código
+                </button>
+            </div>
+            <div class="sz-search-wrap">
+                <i class="fas fa-search sz-search-icon" id="iconoBusqueda"></i>
+                <input type="text" id="inputBusqueda" class="sz-search-input"
+                       placeholder="Buscar producto por nombre...">
+            </div>
+        </div>
+
+        {# Resultados de búsqueda #}
+        <div class="sz-productos-grid" id="resultadosProductos">
+            <div class="sz-caja-hint">
+                <i class="fas fa-search fa-2x mb-2 d-block"></i>
+                Busca un producto para agregarlo al carrito
+            </div>
+        </div>
+
+    </div>
+
+    {# Panel derecho — carrito #}
+    <div class="sz-caja-carrito">
+
+        {# Cliente opcional #}
+        <div class="sz-carrito-cliente">
+            <div class="sz-search-wrap">
+                <i class="fas fa-user sz-search-icon"></i>
+                <input type="text" id="inputCliente" class="sz-search-input"
+                       placeholder="Buscar cliente (opcional)...">
+            </div>
+            <div class="sz-cliente-resultado" id="clienteSeleccionado" style="display:none">
+                <div class="sz-cliente-info">
+                    <i class="fas fa-user-check text-success mr-2"></i>
+                    <span id="clienteNombre"></span>
+                </div>
+                <button class="sz-cliente-quitar" id="btnQuitarCliente">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="clienteSugerencias" class="sz-autocomplete-list"></div>
+        </div>
+
+        {# Items del carrito #}
+        <div class="sz-carrito-items" id="carritoItems">
+            <div class="sz-caja-hint" id="carritoVacio">
+                <i class="fas fa-shopping-cart fa-2x mb-2 d-block"></i>
+                El carrito está vacío
+            </div>
+        </div>
+
+        {# Totales #}
+        <div class="sz-carrito-totales">
+            <div class="sz-total-row">
+                <span>Subtotal</span>
+                <span id="totalSubtotal">{{ _cfg.simbolo }}0.00</span>
+            </div>
+            <div class="sz-total-row" id="ahorroRow" style="display:none">
+                <span class="text-success"><i class="fas fa-tag mr-1"></i>Ahorro promos</span>
+                <span id="totalAhorro" class="text-success">-{{ _cfg.simbolo }}0.00</span>
+            </div>
+            <div class="sz-total-row">
+                <span>Descuento general</span>
+                <div class="sz-descuento-wrap">
+                    <input type="number" id="inputDescuento" class="sz-descuento-input"
+                           min="0" max="100" value="0" placeholder="0">
+                    <span class="sz-descuento-pct">%</span>
+                </div>
+                <span id="totalDescuento" class="text-danger">-{{ _cfg.simbolo }}0.00</span>
+            </div>
+            <div class="sz-total-row sz-total-row--grande">
+                <span>Total</span>
+                <span id="totalFinal">{{ _cfg.simbolo }}0.00</span>
+            </div>
+        </div>
+
+        {# Forma de pago #}
+        <div class="sz-forma-pago">
+            <label class="sz-forma-label">Forma de pago</label>
+            <div class="sz-forma-btns">
+                <button class="sz-forma-btn sz-forma-btn--active" data-tipo="efectivo">
+                    <i class="fas fa-money-bill-wave"></i> Efectivo
+                </button>
+                <button class="sz-forma-btn" data-tipo="tarjeta">
+                    <i class="fas fa-credit-card"></i> Tarjeta
+                </button>
+                <button class="sz-forma-btn" data-tipo="transferencia">
+                    <i class="fas fa-university"></i> Transf.
+                </button>
+            </div>
+        </div>
+
+        {# Cobrar #}
+        <button class="sz-btn-cobrar" id="btnCobrar" disabled>
+            <i class="fas fa-cash-register mr-2"></i>
+            Cobrar <span id="btnTotal">{{ _cfg.simbolo }}0.00</span>
+        </button>
+        <button class="sz-btn-limpiar" id="btnLimpiar">
+            <i class="fas fa-trash mr-1"></i> Limpiar carrito
+        </button>
+
+    </div>
+</div>
+
+{# Modal confirmación de cobro #}
+<div class="modal fade" id="modalCobro" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar venta</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="sz-cobro-resumen">
+                    <div class="sz-cobro-total">
+                        <span>Total a cobrar</span>
+                        <strong id="modalTotal">{{ _cfg.simbolo }}0.00</strong>
+                    </div>
+                    <div class="sz-cobro-pago">
+                        <span>Forma de pago</span>
+                        <strong id="modalTipo"></strong>
+                    </div>
+                    <div class="sz-cobro-cambio" id="cambioWrap" style="display:none">
+                        <div class="sz-cobro-pago mt-2">
+                            <label for="montoPagado">Monto recibido</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text sz-input-prefix">{{ _cfg.simbolo }}</span>
+                                </div>
+                                <input type="number" class="form-control" id="montoPagado"
+                                       step="0.01" min="0" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="sz-total-row mt-2">
+                            <span>Cambio</span>
+                            <strong id="montoCambio" class="text-success">{{ _cfg.simbolo }}0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sz" id="btnConfirmarCobro">
+                    <i class="fas fa-check mr-1"></i> Confirmar y cobrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Modal ingreso de gramaje #}
+<div class="modal fade" id="modalPeso" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-weight mr-2"></i>
+                    <span id="modalPesoNombre">Producto</span>
+                </h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-2" id="modalPesoPrecioLabel"></p>
+                <div class="input-group">
+                    <input type="number" class="form-control form-control-lg text-center"
+                           id="inputGramos" min="1" step="1" placeholder="0">
+                    <div class="input-group-append">
+                        <span class="input-group-text" id="modalPesoUnidadDisplay">g</span>
+                    </div>
+                </div>
+                <p class="text-center mt-2 mb-0">
+                    Subtotal: <strong id="modalPesoSubtotal">{{ _cfg.simbolo }}0.00</strong>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sz" id="btnConfirmarPeso">
+                    <i class="fas fa-plus mr-1"></i> Agregar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Modal venta exitosa #}
+<div class="modal fade" id="modalExito" tabindex="-1" data-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-body text-center py-4">
+                <div class="sz-exito-icon mb-3">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h4 class="sz-dash-title mb-1">¡Venta registrada!</h4>
+                <p class="text-muted mb-3">Venta <strong id="exitoVentaId"></strong> completada</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button class="btn btn-outline-secondary" id="btnNuevaVenta">
+                        <i class="fas fa-plus mr-1"></i> Nueva venta
+                    </button>
+                    <button class="btn btn-sz" id="btnImprimirTicket">
+                        <i class="fas fa-print mr-1"></i> Imprimir ticket
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    let carrito    = [];
+    let clienteId  = null;
+    let tipoPago   = 'efectivo';
+    let ventaId    = null;
+    let buscarTipo = 'nombre';
+    let buscarTimer;
+    let pesoActual  = null; // contexto del producto activo en #modalPeso
+
+    // ── Búsqueda de productos ──────────────────────────────────
+    $('.sz-tipo-btn').on('click', function () {
+        $('.sz-tipo-btn').removeClass('sz-tipo-btn--active');
+        $(this).addClass('sz-tipo-btn--active');
+        buscarTipo = $(this).data('tipo');
+
+        if (buscarTipo === 'codigo') {
+            $('#inputBusqueda').attr('placeholder', 'Escanea o escribe el código de barras...');
+            $('#iconoBusqueda').removeClass('fa-search').addClass('fa-barcode');
+        } else {
+            $('#inputBusqueda').attr('placeholder', 'Buscar producto por nombre...');
+            $('#iconoBusqueda').removeClass('fa-barcode').addClass('fa-search');
+        }
+        $('#inputBusqueda').val('').focus();
+        $('#resultadosProductos').html('<div class="sz-caja-hint"><i class="fas fa-search fa-2x mb-2 d-block"></i>Busca un producto para agregarlo al carrito</div>');
+    });
+
+    $('#inputBusqueda').on('input', function () {
+        clearTimeout(buscarTimer);
+        const termino = $(this).val().trim();
+        if (termino.length < 2) return;
+        buscarTimer = setTimeout(() => buscarProducto(termino), buscarTipo === 'codigo' ? 100 : 350);
+    });
+
+    $('#inputBusqueda').on('keypress', function (e) {
+        if (e.which === 13 && buscarTipo === 'codigo') buscarProducto($(this).val().trim());
+    });
+
+    function buscarProducto(termino) {
+        if (!termino) return;
+        $('#resultadosProductos').html('<div class="sz-caja-hint"><i class="fas fa-spinner fa-spin fa-2x mb-2 d-block"></i>Buscando...</div>');
+        $.ajax({
+            url:    base_url('ventas/buscarProducto'),
+            method: 'POST',
+            data:   { termino, tipo: buscarTipo },
+            success: function (productos) {
+                if (!Array.isArray(productos)) productos = productos.data || [];
+                renderProductos(productos);
+            }
+        });
+    }
+
+    // ── Render productos con promociones ───────────────────────
+    function renderProductos(productos) {
+        if (!productos.length) {
+            $('#resultadosProductos').html('<div class="sz-caja-hint"><i class="fas fa-box-open fa-2x mb-2 d-block"></i>Sin resultados</div>');
+            return;
+        }
+
+        let html = '<div class="sz-prod-lista">';
+        productos.forEach(p => {
+            const sinStock   = p.stock <= 0;
+            const tienePromo = p.promo !== null && p.promo !== undefined;
+            const promoJson  = tienePromo
+                ? JSON.stringify(p.promo).replace(/'/g, "\\'").replace(/"/g, '&quot;')
+                : 'null';
+            const esPeso     = !!p.venta_por_peso;
+            const unidad     = p.unidad_peso || 'kg';
+
+            // Para cantidad_minima mostrar precio original en la tarjeta
+            const esCantMin = tienePromo && p.promo.tipo === 'cantidad_minima';
+
+            // Sufijo de unidad para precios por peso
+            const sufijo    = esPeso ? ` / ${unidad}` : '';
+            const precioStr = `${_SIMBOLO_}${parseFloat(p.precio_venta).toFixed(2)}${sufijo}`;
+            const promoStr  = tienePromo ? `${_SIMBOLO_}${parseFloat(p.promo.precio_final).toFixed(2)}${sufijo}` : '';
+
+            // Onclick diferente según tipo de venta
+            const onclickAttr = !sinStock
+                ? (esPeso
+                    ? `onclick="mostrarModalPeso(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.precio_venta}, ${p.stock}, ${promoJson}, '${unidad}')"`
+                    : `onclick="agregarAlCarrito(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.precio_venta}, ${p.stock}, ${promoJson})"`)
+                : '';
+
+            const stockDisplay = sinStock
+                ? 'Agotado'
+                : (esPeso
+                    ? `Stock: ${parseFloat(p.stock).toFixed(3)} ${unidad}`
+                    : `Stock: ${p.stock}`);
+
+            html += `
+                <div class="sz-prod-item ${sinStock ? 'sz-prod-item--agotado' : ''} ${tienePromo ? 'sz-prod-item--promo' : ''}"
+                     ${onclickAttr}>
+
+                    ${tienePromo ? `<div class="sz-prod-promo-ribbon">${p.promo.descripcion}</div>` : ''}
+
+                    <div class="sz-prod-item-img">
+                        ${p.imagen
+                            ? `<img src="${base_url('public/images/productos/' + p.imagen)}" alt="${p.nombre}">`
+                            : `<i class="fas fa-box"></i>`}
+                    </div>
+
+                    <span class="sz-prod-item-nombre">${p.nombre}</span>
+
+                    ${tienePromo && !esCantMin
+                        ? `<div class="sz-prod-precios">
+                               <span class="sz-prod-precio-original">${precioStr}</span>
+                               <span class="sz-prod-precio-promo">${promoStr}</span>
+                           </div>`
+                        : `<span class="sz-prod-item-precio">${precioStr}</span>`
+                    }
+
+                    ${esCantMin
+                        ? `<span class="sz-prod-item-promo">
+                               <i class="fas fa-info-circle mr-1"></i>
+                               ${p.promo.valor}% off comprando ${p.promo.cantidad_min}+
+                           </span>`
+                        : ''
+                    }
+
+                    <span class="sz-prod-item-stock ${p.stock <= p.stock_minimo ? 'text-warning' : ''}">
+                        ${stockDisplay}
+                    </span>
+
+                    ${!sinStock ? `<div class="sz-prod-item-add"><i class="fas fa-${esPeso ? 'weight' : 'plus'}"></i></div>` : ''}
+                </div>`;
+        });
+        html += '</div>';
+        $('#resultadosProductos').html(html);
+    }
+
+    // ── Helper: calcular precio según promo y cantidad ─────────
+    function calcularPrecio(item) {
+        if (!item.promo) return item.precioOriginal;
+
+        switch (item.promo.tipo) {
+            case 'porcentaje':
+                return parseFloat(item.precioOriginal) * (1 - item.promo.valor / 100);
+
+            case 'precio_fijo':
+                return parseFloat(item.promo.precio_final);
+
+            case '2x1':
+                // El precio por unidad se mantiene, el descuento está en el subtotal
+                return parseFloat(item.precioOriginal);
+
+            case 'cantidad_minima':
+                // Solo aplica si se alcanzó la cantidad mínima
+                return item.cantidad >= item.promo.cantidad_min
+                    ? parseFloat(item.precioOriginal) * (1 - item.promo.valor / 100)
+                    : parseFloat(item.precioOriginal);
+
+            default:
+                return parseFloat(item.precioOriginal);
+        }
+    }
+
+    // ── Helper: calcular subtotal según promo ──────────────────
+    function calcularSubtotal(item) {
+        if (item.promo && item.promo.tipo === '2x1') {
+            // Por cada 2 unidades se cobra 1
+            const unidadesCobradas = Math.ceil(item.cantidad / 2);
+            return parseFloat(item.precioOriginal) * unidadesCobradas;
+        }
+        return item.precio * item.cantidad;
+    }
+
+    // ── Agregar al carrito ─────────────────────────────────────
+    window.agregarAlCarrito = function(id, nombre, precioOriginal, stock, promo) {
+        const existente = carrito.find(i => i.id === id);
+
+        if (existente) {
+            if (existente.cantidad >= stock) {
+                alert('No hay suficiente stock disponible');
+                return;
+            }
+            existente.cantidad++;
+            // Recalcular precio dinámicamente (importante para cantidad_minima)
+            existente.precio = calcularPrecio(existente);
+        } else {
+            const item = {
+                id,
+                nombre,
+                precioOriginal: parseFloat(precioOriginal),
+                promo:          promo || null,
+                cantidad:       1,
+                stock,
+                precio:         parseFloat(precioOriginal),
+                esPeso:         false,
+            };
+            item.precio = calcularPrecio(item);
+            carrito.push(item);
+        }
+
+        renderCarrito();
+        if (buscarTipo === 'codigo') $('#inputBusqueda').val('').focus();
+    };
+
+    // ── Modal de gramaje / peso ────────────────────────────────
+    window.mostrarModalPeso = function(id, nombre, precio, stock, promo, unidad) {
+        pesoActual = {
+            id,
+            nombre,
+            precio:  parseFloat(precio),
+            stock:   parseFloat(stock),
+            promo:   promo || null,
+            unidad:  unidad || 'kg',
+        };
+
+        const step = unidad === 'g' ? '1' : '0.001';
+        const min  = step;
+
+        $('#modalPesoNombre').text(nombre);
+        $('#modalPesoPrecioLabel').text(
+            `Precio: ${_SIMBOLO_}${parseFloat(precio).toFixed(2)} / ${unidad}`
+        );
+        $('#modalPesoUnidadDisplay').text(unidad);
+        $('#inputGramos').attr({ step, min, value: '' });
+        $('#modalPesoSubtotal').text(_SIMBOLO_ + '0.00');
+        $('#modalPeso').modal('show');
+        setTimeout(() => $('#inputGramos').focus(), 400);
+    };
+
+    $('#inputGramos').on('input', function () {
+        if (!pesoActual) return;
+        const cantidad = parseFloat($(this).val()) || 0;
+        $('#modalPesoSubtotal').text(_SIMBOLO_ + (cantidad * pesoActual.precio).toFixed(2));
+    });
+
+    // Enter en el input confirma
+    $('#inputGramos').on('keypress', function (e) {
+        if (e.which === 13) $('#btnConfirmarPeso').trigger('click');
+    });
+
+    $('#btnConfirmarPeso').on('click', function () {
+        if (!pesoActual) return;
+        const cantidad = parseFloat($('#inputGramos').val());
+        if (!cantidad || cantidad <= 0) { $('#inputGramos').focus(); return; }
+        if (cantidad > pesoActual.stock) {
+            alert('No hay suficiente stock disponible');
+            return;
+        }
+        agregarAlCarritoPeso(
+            pesoActual.id, pesoActual.nombre, pesoActual.precio,
+            pesoActual.stock, pesoActual.promo, pesoActual.unidad, cantidad
+        );
+        $('#modalPeso').modal('hide');
+        pesoActual = null;
+        if (buscarTipo === 'codigo') $('#inputBusqueda').val('').focus();
+    });
+
+    // Limpiar contexto al cerrar el modal sin confirmar
+    $('#modalPeso').on('hidden.bs.modal', function () { pesoActual = null; });
+
+    function agregarAlCarritoPeso(id, nombre, precioOriginal, stock, promo, unidad, cantidad) {
+        const existente = carrito.find(i => i.id === id);
+        if (existente) {
+            const nuevaCantidad = parseFloat((existente.cantidad + cantidad).toFixed(3));
+            if (nuevaCantidad > stock) { alert('No hay suficiente stock disponible'); return; }
+            existente.cantidad = nuevaCantidad;
+            existente.precio   = calcularPrecio(existente);
+        } else {
+            const item = {
+                id,
+                nombre,
+                precioOriginal: parseFloat(precioOriginal),
+                promo:          promo || null,
+                cantidad:       parseFloat(cantidad),
+                stock:          parseFloat(stock),
+                precio:         parseFloat(precioOriginal),
+                esPeso:         true,
+                unidad:         unidad || 'kg',
+            };
+            item.precio = calcularPrecio(item);
+            carrito.push(item);
+        }
+        renderCarrito();
+    }
+
+    // ── Render del carrito ─────────────────────────────────────
+    function renderCarrito() {
+        if (!carrito.length) {
+            $('#carritoItems').html('<div class="sz-caja-hint" id="carritoVacio"><i class="fas fa-shopping-cart fa-2x mb-2 d-block"></i>El carrito está vacío</div>');
+            $('#btnCobrar').prop('disabled', true);
+            actualizarTotales();
+            return;
+        }
+
+        let html = '';
+        carrito.forEach((item, idx) => {
+            const subtotalItem   = calcularSubtotal(item);
+            const tienePromo     = item.promo !== null;
+            const promoActiva    = tienePromo && item.precio < item.precioOriginal;
+            const promoPendiente = tienePromo
+                && item.promo.tipo === 'cantidad_minima'
+                && item.cantidad < item.promo.cantidad_min;
+            const ahorro         = promoActiva
+                ? (item.precioOriginal * item.cantidad) - subtotalItem
+                : 0;
+
+            html += `
+                <div class="sz-carrito-item">
+                    <div class="sz-ci-info">
+                        <span class="sz-ci-nombre">${item.nombre}</span>
+                        ${promoActiva
+                            ? `<span class="sz-ci-precio">
+                                   <del>${_SIMBOLO_}${item.precioOriginal.toFixed(2)}${item.esPeso ? ' / ' + item.unidad : ''}</del>
+                                   → ${_SIMBOLO_}${item.precio.toFixed(2)}${item.esPeso ? ' / ' + item.unidad : ' c/u'}
+                               </span>
+                               <span class="sz-ci-ahorro">
+                                   <i class="fas fa-tag mr-1"></i>
+                                   Ahorras ${_SIMBOLO_}${ahorro.toFixed(2)} · ${item.promo.descripcion}
+                               </span>`
+                            : `<span class="sz-ci-precio">${_SIMBOLO_}${item.precioOriginal.toFixed(2)}${item.esPeso ? ' / ' + item.unidad : ' c/u'}</span>`
+                        }
+                        ${promoPendiente
+                            ? `<span class="sz-ci-promo-hint">
+                                   <i class="fas fa-info-circle mr-1"></i>
+                                   Agrega ${item.promo.cantidad_min - item.cantidad} más para ${item.promo.valor}% off
+                               </span>`
+                            : ''
+                        }
+                    </div>
+                    <div class="sz-ci-controles">
+                        ${item.esPeso
+                            ? `<input type="number" class="sz-ci-cantidad" value="${item.cantidad}"
+                                      min="0.001" step="${item.unidad === 'g' ? '1' : '0.001'}" max="${item.stock}"
+                                      onchange="setPeso(${idx}, this.value)" style="width:5rem;text-align:center">
+                               <span class="sz-ci-unidad ml-1">${item.unidad}</span>`
+                            : `<button class="sz-ci-btn" onclick="cambiarCantidad(${idx}, -1)"><i class="fas fa-minus"></i></button>
+                               <input type="number" class="sz-ci-cantidad" value="${item.cantidad}" min="1" max="${item.stock}"
+                                      onchange="setCantidad(${idx}, this.value)">
+                               <button class="sz-ci-btn" onclick="cambiarCantidad(${idx}, 1)"><i class="fas fa-plus"></i></button>`
+                        }
+                    </div>
+                    <span class="sz-ci-subtotal">${_SIMBOLO_}${subtotalItem.toFixed(2)}</span>
+                    <button class="sz-ci-quitar" onclick="quitarItem(${idx})"><i class="fas fa-times"></i></button>
+                </div>`;
+        });
+
+        $('#carritoItems').html(html);
+        $('#btnCobrar').prop('disabled', false);
+        actualizarTotales();
+    }
+
+    // ── Cambiar cantidad ───────────────────────────────────────
+    window.cambiarCantidad = function(idx, delta) {
+        const item  = carrito[idx];
+        const nueva = item.cantidad + delta;
+        if (nueva < 1) return quitarItem(idx);
+        if (nueva > item.stock) { alert('No hay suficiente stock'); return; }
+        item.cantidad = nueva;
+        item.precio   = calcularPrecio(item); // recalcular precio
+        renderCarrito();
+    };
+
+    window.setCantidad = function(idx, valor) {
+        const item  = carrito[idx];
+        const nueva = parseInt(valor);
+        if (isNaN(nueva) || nueva < 1) { item.cantidad = 1; }
+        else if (nueva > item.stock)   { item.cantidad = item.stock; }
+        else                           { item.cantidad = nueva; }
+        item.precio = calcularPrecio(item);
+        renderCarrito();
+    };
+
+    window.setPeso = function(idx, valor) {
+        const item  = carrito[idx];
+        const min   = item.unidad === 'g' ? 1 : 0.001;
+        const nueva = parseFloat(parseFloat(valor).toFixed(3));
+        if (isNaN(nueva) || nueva < min) { item.cantidad = min; }
+        else if (nueva > item.stock)     { item.cantidad = item.stock; }
+        else                             { item.cantidad = nueva; }
+        item.precio = calcularPrecio(item);
+        renderCarrito();
+    };
+
+    window.quitarItem = function(idx) {
+        carrito.splice(idx, 1);
+        renderCarrito();
+    };
+
+    // ── Totales ────────────────────────────────────────────────
+    function actualizarTotales() {
+        const subtotal = carrito.reduce((s, i) => s + calcularSubtotal(i), 0);
+        const ahorro   = carrito.reduce((s, i) => {
+            const sub      = calcularSubtotal(i);
+            const sinPromo = i.precioOriginal * i.cantidad;
+            return s + Math.max(0, sinPromo - sub);
+        }, 0);
+
+        const descuento = parseFloat($('#inputDescuento').val()) || 0;
+        const montoDesc = subtotal * descuento / 100;
+        const total     = subtotal - montoDesc;
+
+        $('#totalSubtotal').text(_SIMBOLO_ + subtotal.toFixed(2));
+        $('#totalDescuento').text('-' + _SIMBOLO_ + montoDesc.toFixed(2));
+        $('#totalFinal').text(_SIMBOLO_ + total.toFixed(2));
+        $('#btnTotal').text(_SIMBOLO_ + total.toFixed(2));
+
+        if (ahorro > 0) {
+            $('#totalAhorro').text('-' + _SIMBOLO_ + ahorro.toFixed(2));
+            $('#ahorroRow').show();
+        } else {
+            $('#ahorroRow').hide();
+        }
+    }
+
+    $('#inputDescuento').on('input', actualizarTotales);
+
+    // ── Forma de pago ──────────────────────────────────────────
+    $('.sz-forma-btn').on('click', function () {
+        $('.sz-forma-btn').removeClass('sz-forma-btn--active');
+        $(this).addClass('sz-forma-btn--active');
+        tipoPago = $(this).data('tipo');
+    });
+
+    // ── Buscar cliente ─────────────────────────────────────────
+    let clienteTimer;
+    $('#inputCliente').on('input', function () {
+        clearTimeout(clienteTimer);
+        const termino = $(this).val().trim();
+        if (termino.length < 2) { $('#clienteSugerencias').empty().hide(); return; }
+
+        clienteTimer = setTimeout(() => {
+            $.ajax({
+                url:    base_url('ventas/buscarCliente'),
+                method: 'POST',
+                data:   { termino },
+                success: function (clientes) {
+                    if (!clientes.length) { $('#clienteSugerencias').empty().hide(); return; }
+                    let html = '';
+                    clientes.forEach(c => {
+                        html += `<div class="sz-autocomplete-item" onclick="seleccionarCliente(${c.id}, '${c.nombre} ${c.apellido}')">
+                            <i class="fas fa-user mr-2"></i>${c.nombre} ${c.apellido}
+                            <small class="text-muted ml-1">${c.email}</small>
+                        </div>`;
+                    });
+                    $('#clienteSugerencias').html(html).show();
+                }
+            });
+        }, 300);
+    });
+
+    window.seleccionarCliente = function(id, nombre) {
+        clienteId = id;
+        $('#clienteNombre').text(nombre);
+        $('#clienteSeleccionado').show();
+        $('#inputCliente').hide();
+        $('#clienteSugerencias').empty().hide();
+    };
+
+    $('#btnQuitarCliente').on('click', function () {
+        clienteId = null;
+        $('#clienteSeleccionado').hide();
+        $('#inputCliente').val('').show();
+    });
+
+    // ── Cobrar ─────────────────────────────────────────────────
+    $('#btnCobrar').on('click', function () {
+        if (!carrito.length) return;
+        const total = parseFloat($('#totalFinal').text().replace(_SIMBOLO_, '').replace(/,/g, ''));
+
+        $('#modalTotal').text(_SIMBOLO_ + total.toFixed(2));
+        $('#modalTipo').text(tipoPago.charAt(0).toUpperCase() + tipoPago.slice(1));
+        $('#cambioWrap').toggle(tipoPago === 'efectivo');
+        $('#montoPagado').val('').off('input').on('input', function () {
+            const cambio = parseFloat($(this).val()) - total;
+            $('#montoCambio').text(_SIMBOLO_ + Math.max(0, cambio).toFixed(2))
+                .toggleClass('text-danger',  cambio < 0)
+                .toggleClass('text-success', cambio >= 0);
+        });
+
+        $('#modalCobro').modal('show');
+    });
+
+    $(document).on('click', '#btnConfirmarCobro', function () {
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Procesando...');
+
+        const subtotal  = carrito.reduce((s, i) => s + calcularSubtotal(i), 0);
+        const descuento = parseFloat($('#inputDescuento').val()) || 0;
+        const total     = subtotal - (subtotal * descuento / 100);
+
+        const itemsPayload = carrito.map(i => ({
+            id:           i.id,
+            nombre:       i.nombre,
+            precio:       i.precioOriginal,         // precio sin promo
+            precio_final: i.precio,                 // precio con promo
+            cantidad:     i.cantidad,
+            subtotal:     calcularSubtotal(i),      // subtotal real (importante para 2x1)
+            promo_id:     i.promo ? i.promo.id   : null,
+            promo_desc:   i.promo ? i.promo.descripcion : '',
+        }));
+
+        $.ajax({
+            url:    base_url('ventas/registrar'),
+            method: 'POST',
+            data: {
+                items:      JSON.stringify(itemsPayload),
+                descuento,
+                tipo_pago:  tipoPago,
+                cliente_id: clienteId || '',
+            },
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    ventaId = res.result.venta_id;
+                    $('#modalCobro').modal('hide');
+                    $('#exitoVentaId').text('#' + String(ventaId).padStart(5, '0'));
+                    $('#modalExito').modal('show');
+                } else {
+                    alert(res.message || 'Error al registrar la venta');
+                }
+            },
+            error: function () { alert('Error de conexión'); },
+            complete: function () {
+                $('#btnConfirmarCobro').prop('disabled', false)
+                    .html('<i class="fas fa-check mr-1"></i> Confirmar y cobrar');
+            }
+        });
+    });
+
+    // ── Post-venta ─────────────────────────────────────────────
+    $('#btnNuevaVenta').on('click', function () {
+        carrito   = [];
+        clienteId = null;
+        ventaId   = null;
+        $('#inputDescuento').val(0);
+        $('.sz-forma-btn').removeClass('sz-forma-btn--active');
+        $('[data-tipo="efectivo"]').addClass('sz-forma-btn--active');
+        tipoPago = 'efectivo';
+        renderCarrito();
+        $('#inputCliente').val('').show();
+        $('#clienteSeleccionado').hide();
+        $('#resultadosProductos').html('<div class="sz-caja-hint"><i class="fas fa-search fa-2x mb-2 d-block"></i>Busca un producto para agregarlo al carrito</div>');
+        $('#modalExito').modal('hide');
+        $('#inputBusqueda').val('').focus();
+    });
+
+    $('#btnImprimirTicket').on('click', function () {
+        if (ventaId) window.open(base_url('ventas/ticket/' + ventaId), '_blank');
+        $('#btnNuevaVenta').trigger('click');
+    });
+
+    $('#btnLimpiar').on('click', function () {
+        if (!carrito.length) return;
+        if (confirm('¿Limpiar el carrito?')) {
+            carrito = [];
+            renderCarrito();
+        }
+    });
+
+    $('#inputBusqueda').focus();
+});
+</script>
+{% endblock %}

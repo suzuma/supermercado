@@ -1,0 +1,139 @@
+<!--
+     autor: Noe Cazarez Camargo
+     contacto: suzumadev@gmail.com
+     fecha: 2019-06-24
+     descripcion: LAYOUT CON SIDEBAR
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Plantilla | {{title}}</title>
+
+    <!-- Fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Estilos -->
+    <link href="{{ 'bootstrap4/css/bootstrap.css'|public }}" rel="stylesheet" />
+    <link href="{{ 'fontawesome590/css/all.css'|public }}" rel="stylesheet" />
+    <link href="{{ 'bower_components/EasyAutocomplete/dist/easy-autocomplete.min.css'|public }}" rel="stylesheet" />
+    <link href="{{ 'css/style.css'|public }}" rel="stylesheet" />
+
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ 'images/favicon/apple-touch-icon.png'|public }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ 'images/favicon/favicon-96x96.png'|public }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ 'images/favicon/favicon-16x16.png'|public }}">
+    <link rel="manifest" href="{{ 'images/favicon/site.webmanifest'|public }}">
+
+</head>
+<body class="{% if menu is null or menu %}sz-has-sidebar{% endif %}">
+
+<!-- Fondo decorativo -->
+<div class="sz-bg-grid"></div>
+<div class="sz-bg-glow"></div>
+
+{% if menu is null or menu %}
+    {% include('partials/new_menu.twig') %}
+{% endif %}
+
+<main class="sz-main {% if menu is null or menu %}sz-main--with-sidebar{% endif %}">
+    <div class="sz-content">
+
+        {% block content %}{% endblock %}
+
+        <footer class="sz-footer">
+            Desarrollado por SuZuMa &copy; {{ "now"|date("Y") }}
+        </footer>
+
+    </div>
+</main>
+
+<!-- Scripts -->
+<script src="{{ 'js/jquery3-4-1.js'|public }}"></script>
+<script src="{{ 'bootstrap4/js/bootstrap.js'|public }}"></script>
+<script src="{{ 'bower_components/riot/riot+compiler.min.js'|public }}"></script>
+<script src="{{ 'bower_components/jquery.form.min/index.js'|public }}"></script>
+<script src="{{ 'bower_components/moment/min/moment.min.js'|public }}"></script>
+<script src="{{ 'bower_components/EasyAutocomplete/dist/jquery.easy-autocomplete.min.js'|public }}"></script>
+<script src="{{ 'js/ini.js'|public }}"></script>
+<script src="{{ 'js/formulas.js'|public }}"></script>
+
+<script>
+    const _BASE_URL_ = {{ ''|url|json_encode|raw }};
+    const _SIMBOLO_  = {{ _cfg.simbolo|json_encode|raw }};
+    function base_url(url) { return _BASE_URL_ + (url || ''); }
+    function redirect(url) { window.location.href = base_url(url); }
+
+    // Enviar token CSRF automáticamente en todas las peticiones AJAX
+    $.ajaxSetup({
+        headers: { 'X-CSRF-Token': $('meta[name="csrf-token"]').attr('content') }
+    });
+
+    // Fix definitivo Bootstrap 4.3.1 — backdrop propio
+    $.fn.modal.Constructor.prototype._showBackdrop = function(callback) {
+        if (this._isShown && this._config.backdrop) {
+            this._backdrop = document.createElement('div');
+            this._backdrop.className = 'modal-backdrop';
+            $(this._backdrop).insertBefore($('.modal.show').first());
+
+            if (this._config.backdrop !== 'static') {
+                $(this._backdrop).on('click', (event) => {
+                    if (this._ignoreBackdropClick) {
+                        this._ignoreBackdropClick = false;
+                        return;
+                    }
+                    if (event.target !== event.currentTarget) return;
+                    this.hide();
+                });
+            }
+
+            $(this._backdrop).addClass('show');
+            if (!callback) return;
+            callback();
+        } else if (!this._isShown && this._backdrop) {
+            $(this._backdrop).removeClass('show');
+            const callbackRemove = () => {
+                this._removeBackdrop();
+                if (callback) callback();
+            };
+            callbackRemove();
+        } else if (callback) {
+            callback();
+        }
+    };
+
+    $(document).ready(function () {
+        const sidebar  = $('#szSidebar');
+        const overlay  = $('#sidebarOverlay');
+        const toggle   = $('#sidebarToggle');
+        const COLLAPSED = 'sz-sidebar--collapsed';
+        const OPEN      = 'sz-sidebar--open';
+
+        if (localStorage.getItem('sidebarCollapsed') === '1') {
+            sidebar.addClass(COLLAPSED);
+        }
+
+        toggle.on('click', function () {
+            if ($(window).width() <= 768) {
+                sidebar.toggleClass(OPEN);
+                overlay.toggleClass('visible');
+            } else {
+                const collapsed = sidebar.toggleClass(COLLAPSED).hasClass(COLLAPSED);
+                localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+            }
+        });
+
+        overlay.on('click', function () {
+            sidebar.removeClass(OPEN);
+            overlay.removeClass('visible');
+        });
+    });
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,317 @@
+{% extends 'partials/tienda_layout.twig' %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb sz-breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ 'tienda'|url }}">Inicio</a></li>
+            <li class="breadcrumb-item"><a href="{{ 'tienda/catalogo'|url }}">Catálogo</a></li>
+            <li class="breadcrumb-item">
+                <a href="{{ ('tienda/catalogo?categoria=' ~ producto.categoria_id)|url }}">
+                    {{ producto.categoria.nombre }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active">{{ producto.nombre }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+
+        {# Imagen #}
+        <div class="col-lg-5 mb-4">
+            <div class="sz-tienda-card p-0 overflow-hidden" style="position:relative">
+                {% if producto.promo %}
+                <div class="sz-tienda-promo-ribbon-lg">{{ producto.promo.descripcion }}</div>
+                {% endif %}
+                {% if producto.imagen %}
+                    <img src="{{ ('images/productos/' ~ producto.imagen)|public }}"
+                         alt="{{ producto.nombre }}" class="img-fluid w-100"
+                         style="max-height:400px;object-fit:contain;padding:2rem">
+                {% else %}
+                    <div class="sz-producto-img-placeholder" style="height:320px;font-size:4rem">
+                        <i class="fas fa-box"></i>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Info del producto #}
+        <div class="col-lg-7 mb-4">
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                <span class="sz-badge-cat">{{ producto.categoria.nombre }}</span>
+                {% if producto.venta_por_peso %}
+                    <span class="sz-tienda-badge-tipo sz-tienda-badge-tipo--peso">
+                        <i class="fas fa-weight mr-1"></i>Se vende por {{ producto.unidad_peso }}
+                    </span>
+                {% else %}
+                    <span class="sz-tienda-badge-tipo sz-tienda-badge-tipo--unidad">
+                        <i class="fas fa-cube mr-1"></i>Se vende por unidad
+                    </span>
+                {% endif %}
+            </div>
+            <h1 style="font-family:var(--sz-font-serif);font-size:1.8rem">{{ producto.nombre }}</h1>
+
+            {% if producto.descripcion %}
+            <p class="text-muted mt-2">{{ producto.descripcion }}</p>
+            {% endif %}
+
+            {# Precio con o sin promoción #}
+            <div class="mt-3 mb-2">
+                {% set sufijo = producto.venta_por_peso ? ' / ' ~ producto.unidad_peso : '' %}
+                {% if producto.promo %}
+                    {% if producto.promo.tipo == 'cantidad_minima' %}
+                        <div class="sz-producto-precio-grande">
+                            {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}{{ sufijo }}
+                        </div>
+                        <div class="sz-tienda-promo-aviso mt-2">
+                            <i class="fas fa-tag mr-2"></i>
+                            Compra <strong>{{ producto.promo.cantidad_min }} o más</strong>
+                            y obtén <strong>{{ producto.promo.valor }}% de descuento</strong>
+                        </div>
+                    {% elseif producto.promo.tipo == '2x1' %}
+                        <div class="sz-producto-precio-grande">
+                            {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}{{ sufijo }}
+                        </div>
+                        <div class="sz-tienda-promo-aviso mt-2">
+                            <i class="fas fa-gift mr-2"></i>
+                            <strong>Promoción 2×1</strong> — ¡Lleva 2 y paga solo 1!
+                        </div>
+                    {% else %}
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="sz-tienda-precio-original-lg">
+                                {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}{{ sufijo }}
+                            </span>
+                            <span class="sz-producto-precio-grande" style="color:var(--sz-accent)">
+                                {{ _cfg.simbolo }}{{ producto.promo.precio_final|number_format(2, '.', ',') }}{{ sufijo }}
+                            </span>
+                        </div>
+                        <div class="sz-tienda-promo-aviso mt-2">
+                            <i class="fas fa-tag mr-2"></i>
+                            {{ producto.promo.nombre }}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="sz-producto-precio-grande">
+                        {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}{{ sufijo }}
+                    </div>
+                {% endif %}
+            </div>
+
+            {# Stock #}
+            <div class="mb-4">
+                {% if producto.stock > 0 %}
+                    <span class="sz-stock-badge sz-badge--ok">
+                        <i class="fas fa-check mr-1"></i>
+                        {% if producto.venta_por_peso %}
+                            Disponible ({{ producto.stock|number_format(3, '.', ',') }} {{ producto.unidad_peso }})
+                        {% else %}
+                            En stock ({{ producto.stock }} disponibles)
+                        {% endif %}
+                    </span>
+                {% else %}
+                    <span class="sz-stock-badge sz-badge--danger">
+                        <i class="fas fa-times mr-1"></i> Agotado
+                    </span>
+                {% endif %}
+            </div>
+
+            {% if producto.stock > 0 %}
+            {% if producto.venta_por_peso %}
+            {# Control de peso #}
+            <div class="sz-qty-row mb-3">
+                <label class="mb-0 mr-3">Cantidad ({{ producto.unidad_peso }}):</label>
+                <div class="sz-qty-control">
+                    <input type="number" id="qtyProducto"
+                           value="{% if producto.unidad_peso == 'g' %}100{% else %}0.5{% endif %}"
+                           min="{% if producto.unidad_peso == 'g' %}1{% else %}0.001{% endif %}"
+                           step="{% if producto.unidad_peso == 'g' %}1{% else %}0.001{% endif %}"
+                           max="{{ producto.stock }}" class="sz-qty-input" style="width:100px">
+                    <span class="ml-2 text-muted">{{ producto.unidad_peso }}</span>
+                </div>
+            </div>
+            {% else %}
+            {# Control de unidades #}
+            <div class="sz-qty-row mb-3">
+                <label class="mb-0 mr-3">Cantidad:</label>
+                <div class="sz-qty-control">
+                    <button onclick="cambiarQty(-1)" class="sz-qty-btn"><i class="fas fa-minus"></i></button>
+                    <input type="number" id="qtyProducto" value="1" min="1" max="{{ producto.stock }}" class="sz-qty-input">
+                    <button onclick="cambiarQty(1)" class="sz-qty-btn"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+
+            {# Aviso dinámico para cantidad_minima #}
+            {% if producto.promo and producto.promo.tipo == 'cantidad_minima' %}
+            <div id="promoHint" class="sz-tienda-promo-aviso mb-3" style="display:none">
+                <i class="fas fa-check-circle mr-2"></i>
+                ¡Descuento del {{ producto.promo.valor }}% aplicado!
+                Precio final: <strong id="precioConPromo"></strong>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            <button class="btn btn-sz btn-lg" id="btnAgregarProducto">
+                <i class="fas fa-cart-plus mr-2"></i> Agregar al carrito
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Productos relacionados #}
+    {% if relacionados|length > 0 %}
+    <div class="mt-5">
+        <h4 class="sz-section-title">Productos relacionados</h4>
+        <div class="sz-productos-grid">
+            {% for p in relacionados %}
+            <div class="sz-producto-card {% if p.promo %}sz-producto-card--promo{% endif %}">
+                {% if p.promo %}
+                <div class="sz-tienda-promo-ribbon">{{ p.promo.descripcion }}</div>
+                {% endif %}
+                <a href="{{ ('tienda/producto/' ~ p.id)|url }}" class="sz-producto-img-wrap">
+                    {% if p.imagen %}
+                        <img src="{{ ('images/productos/' ~ p.imagen)|public }}" alt="{{ p.nombre }}" class="sz-producto-img">
+                    {% else %}
+                        <div class="sz-producto-img-placeholder"><i class="fas fa-box fa-2x"></i></div>
+                    {% endif %}
+                </a>
+                <div class="sz-producto-body">
+                    <a href="{{ ('tienda/producto/' ~ p.id)|url }}" class="sz-producto-nombre">{{ p.nombre }}</a>
+                    <div class="sz-producto-footer">
+                        {% if p.promo and p.promo.tipo not in ['cantidad_minima', '2x1'] %}
+                            <div class="sz-tienda-precios">
+                                <span class="sz-tienda-precio-original">
+                                    {{ _cfg.simbolo }}{{ p.precio_venta|number_format(2, '.', ',') }}
+                                </span>
+                                <span class="sz-tienda-precio-promo">
+                                    {{ _cfg.simbolo }}{{ p.promo.precio_final|number_format(2, '.', ',') }}
+                                </span>
+                            </div>
+                        {% else %}
+                            <span class="sz-producto-precio">
+                                {{ _cfg.simbolo }}{{ p.precio_venta|number_format(2, '.', ',') }}
+                            </span>
+                        {% endif %}
+                        <button class="sz-btn-agregar"
+                                onclick="agregarAlCarritoTienda(
+                                    {{ p.id }},
+                                    '{{ p.nombre|replace({"'": "\\'"}) }}',
+                                    {{ p.precio_venta }},
+                                    {{ p.promo ? p.promo|json_encode|raw : 'null' }}
+                                )">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const productoId     = {{ producto.id }};
+    const precioOriginal = {{ producto.precio_venta }};
+    const promo          = {{ producto.promo ? producto.promo|json_encode|raw : 'null' }};
+    const esPeso         = {{ producto.venta_por_peso ? 'true' : 'false' }};
+    const unidad         = '{{ producto.unidad_peso }}';
+
+    // Solo aplica para productos por unidad
+    function cambiarQty(delta) {
+        const input = document.getElementById('qtyProducto');
+        const nueva = parseInt(input.value) + delta;
+        const max   = parseInt(input.max);
+        input.value = Math.min(Math.max(1, nueva), max);
+        actualizarPromoHint();
+    }
+    window.cambiarQty = cambiarQty;
+
+    function actualizarPromoHint() {
+        if (!promo || promo.tipo !== 'cantidad_minima') return;
+        const qty  = parseInt(document.getElementById('qtyProducto').value) || 1;
+        const hint = document.getElementById('promoHint');
+        const span = document.getElementById('precioConPromo');
+        if (!hint) return;
+
+        if (qty >= promo.cantidad_min) {
+            span.textContent   = _SIMBOLO_ + (precioOriginal * (1 - promo.valor / 100)).toFixed(2);
+            hint.style.display = 'flex';
+        } else {
+            hint.style.display = 'none';
+        }
+    }
+
+    document.getElementById('qtyProducto')?.addEventListener('input', actualizarPromoHint);
+
+    document.getElementById('btnAgregarProducto')?.addEventListener('click', function () {
+        if (esPeso) {
+            // Producto por peso: agregar directamente con la cantidad indicada
+            const cantidad = parseFloat(document.getElementById('qtyProducto').value) || 0;
+            if (cantidad <= 0) return;
+
+            const existente = carrito.find(i => i.id === productoId);
+            if (existente) {
+                existente.cantidad = parseFloat((existente.cantidad + cantidad).toFixed(3));
+            } else {
+                carrito.push({
+                    id:             productoId,
+                    nombre:         '{{ producto.nombre|replace({"'": "\\'"}) }}',
+                    precio:         precioOriginal,
+                    precioOriginal: precioOriginal,
+                    promo:          promo,
+                    cantidad:       parseFloat(cantidad),
+                    esPeso:         true,
+                    unidad:         unidad,
+                });
+            }
+
+            guardarCarrito();
+            renderCarritoDrawer();
+            abrirCarrito();
+            return;
+        }
+
+        // Producto por unidad
+        const qty = parseInt(document.getElementById('qtyProducto').value) || 1;
+
+        let precioFinal = precioOriginal;
+        if (promo) {
+            if (promo.tipo === 'porcentaje') {
+                precioFinal = precioOriginal * (1 - promo.valor / 100);
+            } else if (promo.tipo === 'precio_fijo') {
+                precioFinal = promo.precio_final;
+            } else if (promo.tipo === 'cantidad_minima' && qty >= promo.cantidad_min) {
+                precioFinal = precioOriginal * (1 - promo.valor / 100);
+            }
+        }
+
+        const existente = carrito.find(i => i.id === productoId);
+        if (existente) {
+            existente.cantidad += qty;
+            if (promo && promo.tipo === 'cantidad_minima') {
+                existente.precio = existente.cantidad >= promo.cantidad_min
+                    ? precioOriginal * (1 - promo.valor / 100)
+                    : precioOriginal;
+            }
+        } else {
+            carrito.push({
+                id:             productoId,
+                nombre:         '{{ producto.nombre|replace({"'": "\\'"}) }}',
+                precio:         precioFinal,
+                precioOriginal: precioOriginal,
+                promo:          promo,
+                cantidad:       qty,
+                esPeso:         false,
+            });
+        }
+
+        guardarCarrito();
+        renderCarritoDrawer();
+        abrirCarrito();
+    });
+})();
+</script>
+{% endblock %}

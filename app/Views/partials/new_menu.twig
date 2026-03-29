@@ -1,0 +1,142 @@
+{#
+    autor: Noe Cazarez Camargo
+    descripcion: SIDEBAR DE NAVEGACION — visible segun rol
+#}
+
+<aside class="sz-sidebar" id="szSidebar">
+
+    {# Logo / marca #}
+    <div class="sz-sidebar-brand">
+        <img src="{{ ('images/' ~ _cfg.negocio_logo)|public }}"
+             alt="{{ _cfg.negocio_nombre }}"
+             class="sz-sidebar-logo-img">
+        <span class="sz-sidebar-logo-text">{{ _cfg.negocio_nombre }}</span>
+        {# Botón siempre al final para que no se oculte #}
+        <button class="sz-sidebar-toggle" id="sidebarToggle" title="Expandir">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    {# Perfil del usuario #}
+    <div class="sz-sidebar-profile">
+        <div class="sz-avatar">{{ user().nombre|slice(0,1)|upper }}{{ user().apellido|slice(0,1)|upper }}</div>
+        <div class="sz-profile-info">
+            <span class="sz-profile-name">{{ user().nombre }} {{ user().apellido }}</span>
+            <span class="sz-profile-role">{{ user().rol }}</span>
+        </div>
+    </div>
+
+    {# Navegación #}
+    <nav class="sz-nav">
+
+        {# Dashboard — todos los roles #}
+        <a href="{{ 'home'|url }}" class="sz-nav-item {% if _route == 'home' %}sz-nav-item--active{% endif %}">
+            <i class="fas fa-th-large"></i>
+            <span>Dashboard</span>
+        </a>
+
+        {# Inventario — admin y analista #}
+        {% if isAdmin() or isAnalyst() %}
+
+            <div class="sz-nav-group">
+                <span class="sz-nav-label">Operaciones</span>
+                <a href="{{ 'inventario'|url }}" class="sz-nav-item {% if _route == 'inventario' %}sz-nav-item--active{% endif %}">
+                    <i class="fas fa-boxes"></i>
+                    <span>Inventario</span>
+                    {% if _cfg.stock_bajo_total > 0 %}
+                    <span class="sz-nav-badge" title="{{ _cfg.stock_bajo_total }} producto{{ _cfg.stock_bajo_total != 1 ? 's' : '' }} con stock bajo">
+                        {{ _cfg.stock_bajo_total }}
+                    </span>
+                    {% endif %}
+                </a>
+                <a href="{{ 'proveedores'|url }}" class="sz-nav-item {% if _route == 'proveedores' %}sz-nav-item--active{% endif %}">
+                    <i class="fas fa-truck-loading"></i>
+                    <span>Proveedores</span>
+                </a>
+                <a href="{{ 'clientes'|url }}" class="sz-nav-item {% if _route == 'clientes' %}sz-nav-item--active{% endif %}">
+                    <i class="fas fa-users"></i><span>Clientes</span>
+                </a>
+            </div>
+
+
+        {% endif %}
+
+        {# Ventas — admin y cajero #}
+        {% if isAdmin() or isSeller() %}
+        {% if not (isAdmin() or isAnalyst()) %}
+        <div class="sz-nav-group">
+            <span class="sz-nav-label">Operaciones</span>
+        </div>
+        {% endif %}
+            <a href="{{ 'ventas'|url }}" class="sz-nav-item {% if _route == 'ventas' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-cash-register"></i>
+                <span>Ventas</span>
+            </a>
+            <a href="{{ 'corte-caja'|url }}" class="sz-nav-item {% if _route == 'corte-caja' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-calculator"></i>
+                <span>Corte de caja</span>
+            </a>
+            <a href="{{ 'devoluciones'|url }}" class="sz-nav-item {% if _route == 'devoluciones' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-undo"></i>
+                <span>Devoluciones</span>
+            </a>
+            <a href="{{ 'promociones'|url }}" class="sz-nav-item {% if _route == 'promociones' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-tags"></i><span>Promociones</span>
+            </a>
+        {% endif %}
+
+        {# Pedidos en línea — admin y analista #}
+        {% if isAdmin() or isAnalyst() %}
+            <a href="{{ 'pedidos'|url }}" class="sz-nav-item {% if _route == 'pedidos' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-shopping-bag"></i>
+                <span>Pedidos en línea</span>
+            </a>
+        {% endif %}
+
+        {# Empleados — solo admin #}
+        {% if isAdmin() %}
+        <div class="sz-nav-group">
+            <span class="sz-nav-label">Administración</span>
+            <a href="{{ 'empleados'|url }}" class="sz-nav-item {% if _route == 'empleados' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-users"></i>
+                <span>Empleados</span>
+            </a>
+        </div>
+        {% endif %}
+
+
+        {# Reportes — admin y analista #}
+        {% if isAdmin() or isAnalyst() %}
+        {% if not isAdmin() %}
+        <div class="sz-nav-group">
+            <span class="sz-nav-label">Análisis</span>
+        </div>
+        {% endif %}
+            <a href="{{ 'reportes'|url }}" class="sz-nav-item {% if _route == 'reportes' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-chart-bar"></i>
+                <span>Reportes</span>
+            </a>
+        {% endif %}
+
+        {# Configuración — solo admin #}
+        {% if isAdmin() %}
+            <a href="{{ 'configuracion'|url }}" class="sz-nav-item {% if _route == 'configuracion' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-cog"></i>
+                <span>Configuración</span>
+            </a>
+        {% endif %}
+
+    </nav>
+
+    {# Cerrar sesión #}
+    <div class="sz-sidebar-footer">
+        <a href="{{ 'auth/signout'|url }}" class="sz-nav-item sz-nav-item--signout">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Cerrar sesión</span>
+        </a>
+    </div>
+
+</aside>
+
+{# Overlay para móvil #}
+<div class="sz-sidebar-overlay" id="sidebarOverlay"></div>

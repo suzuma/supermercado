@@ -1,0 +1,19 @@
+body{
+    background-color: #3e3e3e;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+}
+
+.micontenido{
+    background-color: #00b3ee;
+}
+
+.fondo{
+    background-color: #3e3e3e;
+    color: #e04a4a;
+    width: 100px;
+    height: 100px;
+}

@@ -1,0 +1,65 @@
+{% extends 'partials/tienda_layout.twig' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="sz-tienda-card">
+                <div class="sz-tienda-card-header text-center">
+                    <h5 class="mb-0"><i class="fas fa-user-circle mr-2"></i> Iniciar sesión</h5>
+                </div>
+                <div class="p-4">
+                    <form id="formLogin">
+                        <input type="hidden" name="redirect" value="{{ redirect }}">
+                        <div class="form-group">
+                            <label>Correo electrónico</label>
+                            <input type="email" class="form-control" name="email" required
+                                   placeholder="tu@correo.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Contraseña</label>
+                            <input type="password" class="form-control" name="password" required
+                                   placeholder="••••••••">
+                        </div>
+                        <div id="loginError" class="alert alert-danger d-none"></div>
+                        <button type="submit" class="btn btn-sz btn-block" id="btnLogin">
+                            <i class="fas fa-sign-in-alt mr-2"></i> Ingresar
+                        </button>
+                    </form>
+                    <hr>
+                    <p class="text-center text-muted mb-0">
+                        ¿No tienes cuenta?
+                        <a href="{{ 'tienda/registro'|url }}" class="text-green">Regístrate aquí</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$('#formLogin').on('submit', function (e) {
+    e.preventDefault();
+    $('#loginError').addClass('d-none');
+    $('#btnLogin').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Ingresando...');
+
+    $.ajax({
+        url: base_url('tienda/login'), method: 'POST',
+        data: $(this).serialize(), dataType: 'json',
+        success: function (res) {
+            if (res.response) {
+                window.location.href = base_url(res.href);
+            } else {
+                $('#loginError').text(res.message).removeClass('d-none');
+                $('#btnLogin').prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Ingresar');
+            }
+        },
+        error: function () {
+            $('#loginError').text('Error de conexión').removeClass('d-none');
+            $('#btnLogin').prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Ingresar');
+        }
+    });
+});
+</script>
+{% endblock %}

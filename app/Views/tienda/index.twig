@@ -1,0 +1,110 @@
+{% extends 'partials/tienda_layout.twig' %}
+
+{% block content %}
+
+{# Hero #}
+<section class="sz-hero">
+    <div class="container">
+        <div class="sz-hero-content">
+            <h1 class="sz-hero-title">Bienvenido a<br><span>{{ _cfg.negocio_nombre }}</span></h1>
+            <p class="sz-hero-sub">Los mejores productos frescos y de calidad, directo a tu puerta.</p>
+            <a href="{{ 'tienda/catalogo'|url }}" class="btn sz-btn-hero">
+                <i class="fas fa-store mr-2"></i> Ver catálogo completo
+            </a>
+        </div>
+    </div>
+</section>
+
+{# Categorías #}
+<section class="sz-section">
+    <div class="container">
+        <h2 class="sz-section-title">Compra por categoría</h2>
+        <div class="sz-categorias-grid">
+            {% for cat in categorias %}
+            <a href="{{ ('tienda/catalogo?categoria=' ~ cat.id)|url }}" class="sz-cat-card">
+                <div class="sz-cat-icon">
+                    {% if cat.nombre == 'Frutas y verduras' %}<i class="fas fa-apple-alt"></i>
+                    {% elseif cat.nombre == 'Lácteos' %}<i class="fas fa-cheese"></i>
+                    {% elseif cat.nombre == 'Carnes' %}<i class="fas fa-drumstick-bite"></i>
+                    {% elseif cat.nombre == 'Bebidas' %}<i class="fas fa-wine-bottle"></i>
+                    {% elseif cat.nombre == 'Panadería' %}<i class="fas fa-bread-slice"></i>
+                    {% elseif cat.nombre == 'Limpieza' %}<i class="fas fa-spray-can"></i>
+                    {% elseif cat.nombre == 'Abarrotes' %}<i class="fas fa-box"></i>
+                    {% elseif cat.nombre == 'Snacks' %}<i class="fas fa-cookie-bite"></i>
+                    {% elseif cat.nombre == 'Congelados' %}<i class="fas fa-snowflake"></i>
+                    {% else %}<i class="fas fa-tag"></i>{% endif %}
+                </div>
+                <span class="sz-cat-nombre">{{ cat.nombre }}</span>
+                <small class="sz-cat-count">{{ cat.productos_count }} productos</small>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# Productos destacados #}
+<section class="sz-section sz-section--alt">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h2 class="sz-section-title mb-0">Productos destacados</h2>
+            <a href="{{ 'tienda/catalogo'|url }}" class="sz-ver-mas">Ver todos <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+        <div class="sz-productos-grid">
+            {% for producto in destacados %}
+            <div class="sz-producto-card">
+                <a href="{{ ('tienda/producto/' ~ producto.id)|url }}" class="sz-producto-img-wrap">
+                    {% if producto.imagen %}
+                        <img src="{{ ('images/productos/' ~ producto.imagen)|public }}" alt="{{ producto.nombre }}" class="sz-producto-img">
+                    {% else %}
+                        <div class="sz-producto-img-placeholder"><i class="fas fa-box fa-2x"></i></div>
+                    {% endif %}
+                    {% if producto.stock <= producto.stock_minimo %}
+                    <span class="sz-producto-badge sz-producto-badge--warn">Pocas unidades</span>
+                    {% endif %}
+                </a>
+                <div class="sz-producto-body">
+                    <span class="sz-producto-cat">{{ producto.categoria.nombre }}</span>
+                    <a href="{{ ('tienda/producto/' ~ producto.id)|url }}" class="sz-producto-nombre">{{ producto.nombre }}</a>
+                    <div class="sz-producto-footer">
+                        <span class="sz-producto-precio">{{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}</span>
+                        <button class="sz-btn-agregar"
+                                onclick="agregarAlCarritoTienda({{ producto.id }}, '{{ producto.nombre|replace({"'": "\\'"}) }}', {{ producto.precio_venta }})">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# Beneficios #}
+<section class="sz-section">
+    <div class="container">
+        <div class="sz-beneficios">
+            <div class="sz-beneficio">
+                <div class="sz-beneficio-icon"><i class="fas fa-truck"></i></div>
+                <h6>Entrega a domicilio</h6>
+                <p class="text-muted small">Llevamos tus productos hasta la puerta de tu casa</p>
+            </div>
+            <div class="sz-beneficio">
+                <div class="sz-beneficio-icon"><i class="fas fa-leaf"></i></div>
+                <h6>Productos frescos</h6>
+                <p class="text-muted small">Seleccionamos los mejores productos cada día</p>
+            </div>
+            <div class="sz-beneficio">
+                <div class="sz-beneficio-icon"><i class="fas fa-shield-alt"></i></div>
+                <h6>Compra segura</h6>
+                <p class="text-muted small">Tus datos y pedidos siempre protegidos</p>
+            </div>
+            <div class="sz-beneficio">
+                <div class="sz-beneficio-icon"><i class="fas fa-headset"></i></div>
+                <h6>Atención al cliente</h6>
+                <p class="text-muted small">Estamos aquí para ayudarte en todo momento</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

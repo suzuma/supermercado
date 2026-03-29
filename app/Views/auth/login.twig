@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plantilla | Autentificación</title>
+
+    <!-- Fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Estilos -->
+    <link href="{{ 'bootstrap4/css/bootstrap.css'|public }}" rel="stylesheet" />
+    <link href="{{ 'fontawesome590/css/all.css'|public }}" rel="stylesheet" />
+    <link href="{{ 'css/style.css'|public }}" rel="stylesheet" />
+
+    <style>
+        :root {
+            --accent:    #e85d04;
+            --accent-dk: #c44d03;
+            --green:     #1a6b2f;
+            --ink:       #0f1a0d;
+            --paper:     #f5f7f4;
+            --muted:     #6b7a6d;
+            --border:    #dae3db;
+            --card-bg:   #ffffff;
+            --input-bg:  #f8faf8;
+            --shadow:    0 2px 8px rgba(15,26,13,.07), 0 12px 40px rgba(15,26,13,.09);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--paper);
+            min-height: 100vh;
+            display: flex;
+            align-items: stretch;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* ── Fondo decorativo ─────────────────────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 48px 48px;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            width: 700px;
+            height: 700px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(45,158,58,.07) 0%, transparent 70%);
+            top: -150px;
+            right: -200px;
+            pointer-events: none;
+        }
+
+        /* ── Layout de dos columnas en desktop ────────────── */
+        .login-container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Panel izquierdo — decorativo, solo desktop */
+        .login-panel {
+            display: none;
+            flex: 1;
+            background: linear-gradient(160deg, #1a6b2f 0%, #0f3d1a 100%);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 2rem;
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-panel::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.04);
+            top: -100px;
+            left: -100px;
+        }
+
+        .login-panel::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: rgba(232,93,4,.15);
+            bottom: -80px;
+            right: -80px;
+        }
+
+        .login-panel-logo {
+            width: 160px;
+            height: 160px;
+            object-fit: contain;
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 8px 24px rgba(0,0,0,.3));
+        }
+
+        .login-panel-text {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-panel-text h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2rem;
+            color: #ffffff;
+            margin-bottom: .5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .login-panel-text p {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,.65);
+            line-height: 1.6;
+            max-width: 280px;
+        }
+
+        .login-panel-features {
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-panel-feature {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            color: rgba(255,255,255,.8);
+            font-size: 0.85rem;
+        }
+
+        .login-panel-feature i {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: rgba(255,255,255,.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: #e85d04;
+            flex-shrink: 0;
+        }
+
+        /* Panel derecho — formulario */
+        .login-form-panel {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.25rem;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 420px;
+            animation: fadeUp .5s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Marca — solo visible en móvil */
+        .login-brand {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-logo-img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,.12));
+            margin-bottom: .5rem;
+        }
+
+        .login-brand .tagline {
+            font-size: 0.78rem;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        /* ── Tarjeta del formulario ───────────────────────── */
+        .login-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            padding: 2.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--green), var(--accent));
+        }
+
+        .login-card h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.5rem;
+            color: var(--ink);
+            margin-bottom: .25rem;
+            letter-spacing: -0.01em;
+        }
+
+        .login-card .subtitle {
+            font-size: 0.875rem;
+            color: var(--muted);
+            margin-bottom: 1.75rem;
+        }
+
+        /* ── Campos ───────────────────────────────────────── */
+        .field-group { margin-bottom: 1.25rem; }
+
+        .field-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--ink);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .field-wrap { position: relative; }
+
+        .field-wrap .field-icon {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            font-size: 0.82rem;
+            pointer-events: none;
+            transition: color .2s;
+        }
+
+        .field-wrap input {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 11px 40px 11px 38px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            color: var(--ink);
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+            -webkit-appearance: none;
+        }
+
+        .field-wrap input::placeholder { color: #aab5ac; }
+
+        .field-wrap input:focus {
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(26,107,47,.1);
+            background: #fff;
+        }
+
+        .field-wrap:focus-within .field-icon { color: var(--green); }
+
+        .toggle-pass {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 0;
+            font-size: 0.82rem;
+            transition: color .2s;
+            line-height: 1;
+        }
+
+        .toggle-pass:hover { color: var(--green); }
+
+        .field-error {
+            font-size: 0.75rem;
+            color: #c0392b;
+            margin-top: 5px;
+            display: none;
+            font-style: italic;
+        }
+
+        /* ── Botón ────────────────────────────────────────── */
+        .btn-login {
+            width: 100%;
+            background: var(--green);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 13px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: .5rem;
+            transition: background .2s, transform .1s, box-shadow .2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login:hover {
+            background: #155826;
+            box-shadow: 0 4px 16px rgba(26,107,47,.3);
+        }
+
+        .btn-login:active { transform: scale(0.985); }
+
+        .btn-login .btn-text { transition: opacity .2s; }
+
+        .btn-login .btn-spinner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity .2s;
+        }
+
+        .btn-login.loading .btn-text    { opacity: 0; }
+        .btn-login.loading .btn-spinner { opacity: 1; }
+
+        .spinner-ring {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Alerta de error ──────────────────────────────── */
+        .alert-error {
+            background: #fdf2f2;
+            border: 1px solid #f5c6c6;
+            border-radius: 10px;
+            padding: 11px 14px;
+            font-size: 0.84rem;
+            color: #a93226;
+            margin-bottom: 1.25rem;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-error.visible { display: flex; }
+
+        /* ── Footer ───────────────────────────────────────── */
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        /* ── Responsivo ───────────────────────────────────── */
+
+        /* Tablet y desktop: muestra panel lateral */
+        @media (min-width: 768px) {
+            .login-panel { display: flex; }
+            .login-brand  { display: none; }
+            .login-form-panel { flex: 0 0 480px; }
+        }
+
+        /* Pantallas grandes */
+        @media (min-width: 1200px) {
+            .login-form-panel { flex: 0 0 520px; }
+            .login-card { padding: 2.75rem; }
+        }
+
+        /* Móvil pequeño */
+        @media (max-width: 400px) {
+            .login-form-panel { padding: 1.5rem 1rem; }
+            .login-card { padding: 1.75rem 1.25rem; }
+            .login-card h2 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+
+    {# Panel lateral — solo desktop #}
+    <div class="login-panel">
+        <img src="{{ 'images/logo_super.png'|public }}"
+             alt="Supermercado Web"
+             class="login-panel-logo">
+
+        <div class="login-panel-text">
+            <h2>Supermercado Web</h2>
+            <p>Sistema integral de gestión para tu supermercado</p>
+        </div>
+
+        <div class="login-panel-features">
+            <div class="login-panel-feature">
+                <i class="fas fa-boxes"></i>
+                Control de inventario en tiempo real
+            </div>
+            <div class="login-panel-feature">
+                <i class="fas fa-shopping-bag"></i>
+                Venta en línea integrada
+            </div>
+            <div class="login-panel-feature">
+                <i class="fas fa-users"></i>
+                Gestión de empleados y roles
+            </div>
+            <div class="login-panel-feature">
+                <i class="fas fa-chart-bar"></i>
+                Reportes y análisis de ventas
+            </div>
+        </div>
+    </div>
+
+    {# Panel del formulario #}
+    <div class="login-form-panel">
+        <div class="login-wrapper">
+
+            {# Logo — solo móvil #}
+            <div class="login-brand">
+                <img src="{{ 'images/logo_super.png'|public }}"
+                     alt="Supermercado Web"
+                     class="login-logo-img">
+                <div class="tagline">Sistema de gestión</div>
+            </div>
+
+            <div class="login-card">
+
+                <h2>Bienvenido</h2>
+                <p class="subtitle">Ingresa tus credenciales para continuar</p>
+
+                <div class="alert-error" id="alertError">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="alertMsg">Credenciales no válidas</span>
+                </div>
+
+                <form id="loginForm" novalidate>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="field-group">
+                        <label for="email">Correo electrónico</label>
+                        <div class="field-wrap">
+                            <input type="email" id="email" name="email"
+                                   placeholder="usuario@ejemplo.com"
+                                   autocomplete="email">
+                            <i class="fas fa-envelope field-icon"></i>
+                        </div>
+                        <span class="field-error" id="emailError">Ingresa un correo válido</span>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="password">Contraseña</label>
+                        <div class="field-wrap">
+                            <input type="password" id="password" name="password"
+                                   placeholder="••••••••"
+                                   autocomplete="current-password">
+                            <i class="fas fa-lock field-icon"></i>
+                            <button type="button" class="toggle-pass" id="togglePass" tabindex="-1">
+                                <i class="fas fa-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                        <span class="field-error" id="passError">La contraseña es requerida</span>
+                    </div>
+
+                    <button type="submit" class="btn-login" id="btnLogin">
+                        <span class="btn-text">Iniciar sesión</span>
+                        <span class="btn-spinner"><span class="spinner-ring"></span></span>
+                    </button>
+
+                </form>
+
+            </div>
+
+            <div class="login-footer">
+                Desarrollado por SuZuMa &copy; {{ "now"|date("Y") }}
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- Scripts -->
+<script src="{{ 'js/jquery3-4-1.js'|public }}"></script>
+<script src="{{ 'bower_components/jquery.form.min/index.js'|public }}"></script>
+
+<script>
+    const _BASE_URL_ = {{ base_url|json_encode|raw }};
+    function base_url(url) { return _BASE_URL_ + (url || ''); }
+    function redirect(url) { window.location.href = base_url(url); }
+
+    document.getElementById('togglePass').addEventListener('click', function () {
+        const input = document.getElementById('password');
+        const icon  = document.getElementById('eyeIcon');
+        const show  = input.type === 'password';
+        input.type  = show ? 'text' : 'password';
+        icon.classList.toggle('fa-eye',       !show);
+        icon.classList.toggle('fa-eye-slash',  show);
+    });
+
+    $(document).ready(function () {
+        $('#loginForm').on('submit', function (e) {
+            e.preventDefault();
+
+            const email = $('#email').val().trim();
+            const pass  = $('#password').val().trim();
+            let valid   = true;
+
+            $('#emailError').hide();
+            $('#passError').hide();
+            $('#alertError').removeClass('visible');
+
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                $('#emailError').show(); valid = false;
+            }
+            if (!pass) {
+                $('#passError').show(); valid = false;
+            }
+            if (!valid) return;
+
+            $('#btnLogin').addClass('loading').prop('disabled', true);
+
+            $.ajax({
+                url:         base_url('auth/signin'),
+                method:      'POST',
+                data:        $('#loginForm').serialize(),
+                contentType: 'application/x-www-form-urlencoded',
+                dataType:    'json',
+                success: function (data) {
+                    if (data.response) {
+                        redirect(data.href || 'home');
+                    } else {
+                        $('#btnLogin').removeClass('loading').prop('disabled', false);
+                        $('#alertMsg').text(data.message || 'Credenciales no válidas');
+                        $('#alertError').addClass('visible');
+                    }
+                },
+                error: function () {
+                    $('#btnLogin').removeClass('loading').prop('disabled', false);
+                    $('#alertMsg').text('Error de conexión. Intenta de nuevo.');
+                    $('#alertError').addClass('visible');
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

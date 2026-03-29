@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ _cfg.negocio_nombre }} | {{ title }}</title>
+    <link href="{{ 'bootstrap4/css/bootstrap.css'|public }}" rel="stylesheet">
+    <link href="{{ 'fontawesome590/css/all.css'|public }}" rel="stylesheet">
+    <link href="{{ 'css/tienda.css'|public }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+</head>
+<body class="sz-tienda">
+
+    {# Navbar #}
+    <nav class="sz-tienda-nav">
+        <div class="container">
+            <div class="sz-tienda-nav-inner">
+
+                {# Logo #}
+                <a href="{{ 'tienda'|url }}" class="sz-tienda-logo">
+                    <img src="{{ ('images/' ~ _cfg.negocio_logo)|public }}" alt="Logo" class="sz-tienda-logo-img">
+                    <span>{{ _cfg.negocio_nombre }}</span>
+                </a>
+
+                {# Búsqueda #}
+                <form class="sz-tienda-search" action="{{ 'tienda/catalogo'|url }}" method="GET">
+                    <i class="fas fa-search sz-tienda-search-icon"></i>
+                    <input type="text" name="busqueda" placeholder="Buscar productos..."
+                           value="{{ busqueda ?? '' }}" class="sz-tienda-search-input">
+                </form>
+
+                {# Acciones #}
+                <div class="sz-tienda-nav-actions">
+                    {% if cliente_session %}
+                    <div class="dropdown">
+                        <button class="sz-tienda-nav-btn dropdown-toggle" data-toggle="dropdown">
+                            <i class="fas fa-user mr-1"></i>
+                            {{ cliente_session.nombre }}
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a class="dropdown-item" href="{{ 'tienda/seguimiento'|url }}">
+                                <i class="fas fa-box mr-2"></i> Mis pedidos
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-danger" href="{{ 'tienda/logout'|url }}">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Cerrar sesión
+                            </a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <a href="{{ 'tienda/login'|url }}" class="sz-tienda-nav-btn">
+                        <i class="fas fa-user mr-1"></i> Ingresar
+                    </a>
+                    {% endif %}
+
+                    <button class="sz-tienda-cart-btn" id="btnAbrirCarrito">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="sz-cart-count" id="cartCount" style="display:none">0</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </nav>
+
+    {# Contenido #}
+    <main class="sz-tienda-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    {# Footer #}
+    <footer class="sz-tienda-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="sz-tienda-logo mb-3">
+                        <img src="{{ ('images/' ~ _cfg.negocio_logo)|public }}" alt="Logo" class="sz-tienda-logo-img">
+                        <span>{{ _cfg.negocio_nombre }}</span>
+                    </div>
+                    <p class="text-muted small">Tu supermercado de confianza con los mejores productos al mejor precio.</p>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <h6 class="sz-footer-title">Navegación</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ 'tienda'|url }}" class="sz-footer-link">Inicio</a></li>
+                        <li><a href="{{ 'tienda/catalogo'|url }}" class="sz-footer-link">Catálogo</a></li>
+                        <li><a href="{{ 'tienda/seguimiento'|url }}" class="sz-footer-link">Mis pedidos</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <h6 class="sz-footer-title">Contacto</h6>
+                    <ul class="list-unstyled small text-muted">
+                        {% if _cfg.negocio_tel %}
+                        <li><i class="fas fa-phone mr-2"></i>{{ _cfg.negocio_tel }}</li>
+                        {% endif %}
+                        <li><i class="fas fa-map-marker-alt mr-2"></i>{{ _cfg.negocio_direccion ?? '' }}</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="sz-footer-bottom">
+                <small class="text-muted">© {{ "now"|date("Y") }} {{ _cfg.negocio_nombre }}. Todos los derechos reservados.</small>
+            </div>
+        </div>
+    </footer>
+
+    {# Carrito lateral (drawer) #}
+    <div class="sz-cart-overlay" id="cartOverlay"></div>
+    <div class="sz-cart-drawer" id="cartDrawer">
+        <div class="sz-cart-drawer-header">
+            <h5 class="mb-0"><i class="fas fa-shopping-cart mr-2"></i> Mi carrito</h5>
+            <button class="sz-cart-close" id="btnCerrarCarrito"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="sz-cart-drawer-body" id="cartItems">
+            <div class="sz-cart-empty">
+                <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                <p>Tu carrito está vacío</p>
+            </div>
+        </div>
+        <div class="sz-cart-drawer-footer">
+            <div class="sz-cart-total">
+                <span>Total</span>
+                <strong id="cartTotal">{{ _cfg.simbolo }}0.00</strong>
+            </div>
+            <a href="{{ 'tienda/checkout'|url }}" class="btn btn-sz btn-block mt-3" id="btnCheckout">
+                <i class="fas fa-lock mr-2"></i> Finalizar compra
+            </a>
+            <a href="{{ 'tienda/catalogo'|url }}" class="btn btn-outline-secondary btn-block mt-2">
+                Seguir comprando
+            </a>
+        </div>
+    </div>
+
+    {# Modal peso tienda #}
+    <div class="modal fade" id="modalPesoTienda" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content sz-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-weight mr-2"></i>
+                        <span id="mpNombre">Producto</span>
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-2" id="mpPrecioLabel"></p>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg text-center"
+                               id="mpCantidad" min="0.001" step="0.001" placeholder="0">
+                        <div class="input-group-append">
+                            <span class="input-group-text" id="mpUnidad">kg</span>
+                        </div>
+                    </div>
+                    <p class="text-center mt-2 mb-0 small">
+                        Subtotal: <strong id="mpSubtotal">{{ _cfg.simbolo }}0.00</strong>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-sz btn-sm" id="mpConfirmar">
+                        <i class="fas fa-cart-plus mr-1"></i> Agregar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ 'js/jquery3-4-1.js'|public }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="{{ 'bootstrap4/js/bootstrap.js'|public }}"></script>
+
+
+    <script>
+        const _BASE_URL_ = '{{ ''|url }}';
+        const _SIMBOLO_  = '{{ _cfg.simbolo }}';
+
+        // Enviar token CSRF automáticamente en todas las peticiones AJAX
+        $.ajaxSetup({
+            headers: { 'X-CSRF-Token': $('meta[name="csrf-token"]').attr('content') }
+        });
+
+        function base_url(url) { return _BASE_URL_ + (url || ''); }
+
+        // ── Carrito en localStorage ────────────────────────────
+        let carrito = JSON.parse(localStorage.getItem('sz_carrito') || '[]');
+
+        function guardarCarrito() {
+            localStorage.setItem('sz_carrito', JSON.stringify(carrito));
+            actualizarContador();
+        }
+
+        function actualizarContador() {
+            // Contar ítems distintos (no sumar kg como unidades)
+            const total = carrito.length;
+            if (total > 0) {
+                $('#cartCount').text(total).show();
+            } else {
+                $('#cartCount').hide();
+            }
+        }
+
+        // ── Calcular subtotal de un ítem (maneja 2x1) ─────────
+        function calcularSubtotalItem(item) {
+            if (item.promo && item.promo.tipo === '2x1') {
+                const cobradas = Math.ceil(item.cantidad / 2);
+                return parseFloat(item.precioOriginal) * cobradas;
+            }
+            return item.precio * item.cantidad;
+        }
+
+        // ── Render del carrito drawer ──────────────────────────
+        function renderCarritoDrawer() {
+            if (!carrito.length) {
+                $('#cartItems').html('<div class="sz-cart-empty"><i class="fas fa-shopping-cart fa-3x mb-3"></i><p>Tu carrito está vacío</p></div>');
+                $('#cartTotal').text(_SIMBOLO_ + '0.00');
+                return;
+            }
+
+            let html  = '';
+            let total = 0;
+
+            carrito.forEach((item, idx) => {
+                const sub        = calcularSubtotalItem(item);
+                const tienePromo = item.promo && (
+                    item.precio < item.precioOriginal || item.promo.tipo === '2x1'
+                );
+                const ahorro = tienePromo
+                    ? (parseFloat(item.precioOriginal) * item.cantidad) - sub
+                    : 0;
+                const promoPendiente = item.promo
+                    && item.promo.tipo === 'cantidad_minima'
+                    && item.cantidad < item.promo.cantidad_min;
+
+                total += sub;
+
+                html += `
+                    <div class="sz-cart-item">
+                        <div class="sz-cart-item-info">
+                            <span class="sz-cart-item-nombre">${item.nombre}</span>
+                            ${tienePromo
+                                ? `<span class="sz-cart-item-precio">
+                                       <del>${_SIMBOLO_}${parseFloat(item.precioOriginal).toFixed(2)}${item.esPeso ? ' / ' + item.unidad : ''}</del>
+                                       → ${_SIMBOLO_}${item.precio.toFixed(2)}${item.esPeso ? ' / ' + item.unidad : ' c/u'}
+                                   </span>
+                                   <span class="sz-cart-item-ahorro">
+                                       <i class="fas fa-tag mr-1"></i>
+                                       Ahorras ${_SIMBOLO_}${ahorro.toFixed(2)}
+                                       ${item.promo.tipo === '2x1' ? ' · 2×1' : ''}
+                                   </span>`
+                                : `<span class="sz-cart-item-precio">
+                                       ${_SIMBOLO_}${parseFloat(item.precioOriginal).toFixed(2)}${item.esPeso ? ' / ' + item.unidad : ' c/u'}
+                                   </span>`
+                            }
+                            ${promoPendiente
+                                ? `<span class="sz-cart-item-hint">
+                                       <i class="fas fa-info-circle mr-1"></i>
+                                       Agrega ${item.promo.cantidad_min - item.cantidad} más para ${item.promo.valor}% off
+                                   </span>`
+                                : ''
+                            }
+                        </div>
+                        <div class="sz-cart-item-controls">
+                            ${item.esPeso
+                                ? `<span class="sz-cart-qty">${item.cantidad} ${item.unidad}</span>`
+                                : `<button onclick="cambiarCantidadCarrito(${idx}, -1)" class="sz-cart-qty-btn">
+                                       <i class="fas fa-minus"></i>
+                                   </button>
+                                   <span class="sz-cart-qty">${item.cantidad}</span>
+                                   <button onclick="cambiarCantidadCarrito(${idx}, 1)" class="sz-cart-qty-btn">
+                                       <i class="fas fa-plus"></i>
+                                   </button>`
+                            }
+                        </div>
+                        <span class="sz-cart-item-sub">${_SIMBOLO_}${sub.toFixed(2)}</span>
+                        <button onclick="quitarDeCarrito(${idx})" class="sz-cart-item-del">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>`;
+            });
+
+            $('#cartItems').html(html);
+            $('#cartTotal').text(_SIMBOLO_ + total.toLocaleString('es-MX', { minimumFractionDigits: 2 }));
+        }
+
+        // ── Agregar al carrito por unidad ──────────────────────
+        window.agregarAlCarritoTienda = function(id, nombre, precioOriginal, promo) {
+            let precio = parseFloat(precioOriginal);
+
+            if (promo) {
+                if (promo.tipo === 'porcentaje') {
+                    precio = parseFloat(precioOriginal) * (1 - promo.valor / 100);
+                } else if (promo.tipo === 'precio_fijo') {
+                    precio = parseFloat(promo.precio_final);
+                }
+            }
+
+            const existente = carrito.find(i => i.id === id);
+            if (existente) {
+                existente.cantidad++;
+                if (promo && promo.tipo === 'cantidad_minima') {
+                    existente.precio = existente.cantidad >= promo.cantidad_min
+                        ? parseFloat(precioOriginal) * (1 - promo.valor / 100)
+                        : parseFloat(precioOriginal);
+                }
+            } else {
+                carrito.push({
+                    id,
+                    nombre,
+                    precio,
+                    precioOriginal: parseFloat(precioOriginal),
+                    promo:          promo || null,
+                    cantidad:       1,
+                    esPeso:         false,
+                });
+            }
+
+            guardarCarrito();
+            renderCarritoDrawer();
+            abrirCarrito();
+        };
+
+        // ── Modal + agregar al carrito por peso ────────────────
+        let _mpCtx = null;
+
+        window.mostrarModalPesoTienda = function(id, nombre, precioOriginal, promo, unidad) {
+            _mpCtx = { id, nombre, precio: parseFloat(precioOriginal), promo: promo || null, unidad: unidad || 'kg' };
+
+            const step = unidad === 'g' ? '1' : '0.001';
+            $('#mpNombre').text(nombre);
+            $('#mpPrecioLabel').text(`Precio: ${_SIMBOLO_}${parseFloat(precioOriginal).toFixed(2)} / ${unidad}`);
+            $('#mpUnidad').text(unidad);
+            $('#mpCantidad').attr({ step, min: step, value: '' });
+            $('#mpSubtotal').text(_SIMBOLO_ + '0.00');
+            $('#modalPesoTienda').modal('show');
+            setTimeout(() => $('#mpCantidad').focus(), 400);
+        };
+
+        $('#mpCantidad').on('input', function () {
+            if (!_mpCtx) return;
+            const c = parseFloat($(this).val()) || 0;
+            $('#mpSubtotal').text(_SIMBOLO_ + (c * _mpCtx.precio).toFixed(2));
+        });
+
+        $('#mpCantidad').on('keypress', function (e) {
+            if (e.which === 13) $('#mpConfirmar').trigger('click');
+        });
+
+        $('#mpConfirmar').on('click', function () {
+            if (!_mpCtx) return;
+            const cantidad = parseFloat($('#mpCantidad').val());
+            if (!cantidad || cantidad <= 0) { $('#mpCantidad').focus(); return; }
+
+            const existente = carrito.find(i => i.id === _mpCtx.id);
+            if (existente) {
+                existente.cantidad = parseFloat((existente.cantidad + cantidad).toFixed(3));
+            } else {
+                carrito.push({
+                    id:             _mpCtx.id,
+                    nombre:         _mpCtx.nombre,
+                    precio:         _mpCtx.precio,
+                    precioOriginal: _mpCtx.precio,
+                    promo:          _mpCtx.promo,
+                    cantidad:       parseFloat(cantidad),
+                    esPeso:         true,
+                    unidad:         _mpCtx.unidad,
+                });
+            }
+
+            guardarCarrito();
+            renderCarritoDrawer();
+            $('#modalPesoTienda').modal('hide');
+            _mpCtx = null;
+            abrirCarrito();
+        });
+
+        $('#modalPesoTienda').on('hidden.bs.modal', function () { _mpCtx = null; });
+
+        // ── Cambiar cantidad con recalculo de precio ───────────
+        window.cambiarCantidadCarrito = function(idx, delta) {
+            const item = carrito[idx];
+            item.cantidad += delta;
+
+            if (item.cantidad < 1) {
+                carrito.splice(idx, 1);
+            } else if (item.promo && item.promo.tipo === 'cantidad_minima') {
+                item.precio = item.cantidad >= item.promo.cantidad_min
+                    ? parseFloat(item.precioOriginal) * (1 - item.promo.valor / 100)
+                    : parseFloat(item.precioOriginal);
+            }
+
+            guardarCarrito();
+            renderCarritoDrawer();
+        };
+
+        window.quitarDeCarrito = function(idx) {
+            carrito.splice(idx, 1);
+            guardarCarrito();
+            renderCarritoDrawer();
+        };
+
+        function abrirCarrito() {
+            $('#cartDrawer').addClass('open');
+            $('#cartOverlay').addClass('visible');
+            renderCarritoDrawer();
+        }
+
+        function cerrarCarrito() {
+            $('#cartDrawer').removeClass('open');
+            $('#cartOverlay').removeClass('visible');
+        }
+
+        $(document).ready(function () {
+            actualizarContador();
+            $('#btnAbrirCarrito').on('click', abrirCarrito);
+            $('#btnCerrarCarrito, #cartOverlay').on('click', cerrarCarrito);
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

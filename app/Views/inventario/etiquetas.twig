@@ -1,0 +1,106 @@
+<!--
+    autor: Noe Cazarez Camargo
+    descripcion: Vista de impresión de etiquetas con código de barras
+    Se abre como ventana independiente (menu=false)
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Etiquetas — {{ _cfg.negocio_nombre }}</title>
+<script src="{{ 'js/jquery3-4-1.js'|public }}"></script>
+<script src="{{ 'js/jsbarcode.min.js'|public }}"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f0f0; }
+
+  .toolbar {
+    background: #2d6a4f; color: #fff; padding: 12px 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .toolbar h1 { font-size: 16px; flex: 1; }
+  .toolbar button {
+    background: #fff; color: #2d6a4f; border: none; padding: 8px 18px;
+    border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;
+  }
+  .toolbar button:hover { background: #eafaf1; }
+  .toolbar .btn-close {
+    background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5);
+  }
+
+  .sheet {
+    max-width: 900px; margin: 24px auto; padding: 20px;
+    display: flex; flex-wrap: wrap; gap: 12px;
+  }
+
+  .label {
+    background: #fff; border: 1px solid #ccc; border-radius: 6px;
+    width: 200px; padding: 10px 12px;
+    display: flex; flex-direction: column; align-items: center;
+    page-break-inside: avoid;
+  }
+  .label-nombre {
+    font-size: 11px; font-weight: bold; text-align: center;
+    margin-bottom: 6px; max-width: 100%; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; width: 100%;
+  }
+  .label svg { max-width: 100%; height: auto; }
+  .label-precio {
+    font-size: 16px; font-weight: bold; margin-top: 6px; color: #2d6a4f;
+  }
+  .label-codigo {
+    font-size: 9px; color: #666; margin-top: 2px; letter-spacing: .5px;
+  }
+  .label-sin-codigo {
+    font-size: 11px; color: #999; font-style: italic; margin: 12px 0;
+    text-align: center;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .sheet { margin: 0; padding: 0; max-width: 100%; }
+    .label { border: 1px solid #999; border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Etiquetas de productos — {{ productos|length }} producto{{ productos|length != 1 ? 's' : '' }}</h1>
+  <button onclick="window.print()">🖨️ Imprimir</button>
+  <button class="btn-close" onclick="window.close()">✕ Cerrar</button>
+</div>
+
+<div class="sheet" id="sheet">
+  {% for p in productos %}
+  <div class="label">
+    <div class="label-nombre" title="{{ p.nombre }}">{{ p.nombre }}</div>
+    {% if p.codigo_barras %}
+      <svg class="barcode"
+           data-codigo="{{ p.codigo_barras }}"
+           jsbarcode-value="{{ p.codigo_barras }}"
+           jsbarcode-format="CODE128"
+           jsbarcode-width="1.5"
+           jsbarcode-height="40"
+           jsbarcode-fontsize="10"
+           jsbarcode-margin="4"
+           jsbarcode-displayvalue="false">
+      </svg>
+      <div class="label-precio">{{ _cfg.simbolo }} {{ p.precio_venta|number_format(2, '.', ',') }}</div>
+      <div class="label-codigo">{{ p.codigo_barras }}</div>
+    {% else %}
+      <div class="label-sin-codigo">Sin código de barras</div>
+      <div class="label-precio">{{ _cfg.simbolo }} {{ p.precio_venta|number_format(2, '.', ',') }}</div>
+    {% endif %}
+  </div>
+  {% else %}
+  <p style="color:#999;padding:2rem">No se seleccionaron productos.</p>
+  {% endfor %}
+</div>
+
+<script>
+  JsBarcode('.barcode').init();
+</script>
+</body>
+</html>

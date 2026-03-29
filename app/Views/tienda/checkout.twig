@@ -1,0 +1,110 @@
+{% extends 'partials/tienda_layout.twig' %}
+
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="sz-section-title">Finalizar compra</h2>
+
+    <div class="row">
+        <div class="col-lg-7 mb-4">
+            <div class="sz-tienda-card">
+                <div class="sz-tienda-card-header">
+                    <h6 class="mb-0"><i class="fas fa-map-marker-alt mr-2"></i> Dirección de entrega</h6>
+                </div>
+                <div class="p-4">
+                    <div class="form-group">
+                        <label>Dirección completa *</label>
+                        <textarea class="form-control" id="checkoutDireccion" rows="3"
+                                  placeholder="Calle, número, colonia, ciudad...">{{ cliente.direccion ?? '' }}</textarea>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Teléfono de contacto</label>
+                        <input type="text" class="form-control" id="checkoutTelefono"
+                               value="{{ cliente.telefono ?? '' }}" placeholder="000-000-0000">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 mb-4">
+            <div class="sz-tienda-card">
+                <div class="sz-tienda-card-header">
+                    <h6 class="mb-0"><i class="fas fa-receipt mr-2"></i> Resumen del pedido</h6>
+                </div>
+                <div class="p-4">
+                    <div id="checkoutItems"></div>
+                    <div class="sz-total-row sz-total-row--grande mt-3">
+                        <span>Total</span>
+                        <span id="checkoutTotal">{{ _cfg.simbolo }}0.00</span>
+                    </div>
+                    <button class="btn btn-sz btn-block mt-4" id="btnConfirmarPedido">
+                        <i class="fas fa-check mr-2"></i> Confirmar pedido
+                    </button>
+                    <div id="checkoutError" class="alert alert-danger mt-3 d-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    // Renderizar resumen
+    function renderResumen() {
+        if (!carrito.length) {
+            window.location.href = base_url('tienda/catalogo');
+            return;
+        }
+        let html = '';
+        let total = 0;
+        carrito.forEach(item => {
+            const sub = item.precio * item.cantidad;
+            total += sub;
+            html += `<div class="sz-total-row">
+                <span>${item.nombre} x${item.cantidad}</span>
+                <span>${_SIMBOLO_}${sub.toFixed(2)}</span>
+            </div>`;
+        });
+        $('#checkoutItems').html(html);
+        $('#checkoutTotal').text(_SIMBOLO_ + total.toLocaleString('es-MX', {minimumFractionDigits:2}));
+    }
+
+    renderResumen();
+
+    $('#btnConfirmarPedido').on('click', function () {
+        const direccion = $('#checkoutDireccion').val().trim();
+        if (!direccion) { $('#checkoutError').text('La dirección es requerida').removeClass('d-none'); return; }
+        if (!carrito.length) { $('#checkoutError').text('Tu carrito está vacío').removeClass('d-none'); return; }
+
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
+        $('#checkoutError').addClass('d-none');
+
+        $.ajax({
+            url: base_url('tienda/pedido'), method: 'POST',
+            data: {
+                items:     JSON.stringify(carrito.map(i => ({ id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad }))),
+                direccion: direccion,
+            },
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    localStorage.removeItem('sz_carrito');
+                    window.location.href = base_url('tienda/confirmacion/' + res.result.pedido_id);
+                } else {
+                    $('#checkoutError').text(res.message).removeClass('d-none');
+                    $('#btnConfirmarPedido').prop('disabled', false)
+                        .html('<i class="fas fa-check mr-2"></i> Confirmar pedido');
+                }
+            },
+            error: function () {
+                $('#checkoutError').text('Error de conexión').removeClass('d-none');
+                $('#btnConfirmarPedido').prop('disabled', false)
+                    .html('<i class="fas fa-check mr-2"></i> Confirmar pedido');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

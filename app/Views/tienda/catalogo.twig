@@ -1,0 +1,177 @@
+{% extends 'partials/tienda_layout.twig' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+
+        {# Sidebar de categorías #}
+        <div class="col-lg-3 mb-4">
+            <div class="sz-tienda-card">
+                <div class="sz-tienda-card-header">
+                    <h6 class="mb-0"><i class="fas fa-list mr-2"></i> Categorías</h6>
+                </div>
+                <div class="p-3">
+                    <a href="{{ 'tienda/catalogo'|url }}"
+                       class="sz-cat-link {% if not categoria_actual %}sz-cat-link--active{% endif %}">
+                        Todos los productos
+                    </a>
+                    {% for cat in categorias %}
+                    <a href="{{ ('tienda/catalogo?categoria=' ~ cat.id)|url }}"
+                       class="sz-cat-link {% if categoria_actual and categoria_actual.id == cat.id %}sz-cat-link--active{% endif %}">
+                        {{ cat.nombre }}
+                        <span class="sz-cat-count-small">{{ cat.productos_count }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# Productos #}
+        <div class="col-lg-9">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                <div>
+                    <h5 class="mb-0">
+                        {{ categoria_actual ? categoria_actual.nombre : 'Todos los productos' }}
+                        {% if busqueda %} — "{{ busqueda }}"{% endif %}
+                    </h5>
+                    <small class="text-muted">{{ total }} producto{{ total != 1 ? 's' : '' }}</small>
+                </div>
+                <form method="GET" action="{{ 'tienda/catalogo'|url }}" class="d-flex gap-2">
+                    {% if categoria_actual %}<input type="hidden" name="categoria" value="{{ categoria_actual.id }}">{% endif %}
+                    {% if busqueda %}<input type="hidden" name="busqueda" value="{{ busqueda }}">{% endif %}
+                    <select name="orden" class="sz-select" style="width:auto" onchange="this.form.submit()">
+                        <option value="recientes"  {% if orden == 'recientes'  %}selected{% endif %}>Más recientes</option>
+                        <option value="precio_asc" {% if orden == 'precio_asc' %}selected{% endif %}>Precio: menor a mayor</option>
+                        <option value="precio_desc"{% if orden == 'precio_desc'%}selected{% endif %}>Precio: mayor a menor</option>
+                        <option value="nombre"     {% if orden == 'nombre'     %}selected{% endif %}>Nombre A-Z</option>
+                    </select>
+                </form>
+            </div>
+
+            {% if productos|length > 0 %}
+            <div class="sz-productos-grid">
+                {% for producto in productos %}
+                <div class="sz-producto-card {% if producto.promo %}sz-producto-card--promo{% endif %}">
+
+                    {# Badge de promoción #}
+                    {% if producto.promo %}
+                    <div class="sz-tienda-promo-ribbon">{{ producto.promo.descripcion }}</div>
+                    {% endif %}
+
+                    <a href="{{ ('tienda/producto/' ~ producto.id)|url }}" class="sz-producto-img-wrap">
+                        {% if producto.imagen %}
+                            <img src="{{ ('images/productos/' ~ producto.imagen)|public }}"
+                                 alt="{{ producto.nombre }}" class="sz-producto-img">
+                        {% else %}
+                            <div class="sz-producto-img-placeholder"><i class="fas fa-box fa-2x"></i></div>
+                        {% endif %}
+                    </a>
+
+                    <div class="sz-producto-body">
+                        <div class="d-flex align-items-center gap-1 mb-1">
+                            <span class="sz-producto-cat">{{ producto.categoria.nombre }}</span>
+                            {% if producto.venta_por_peso %}
+                                <span class="sz-tienda-badge-tipo sz-tienda-badge-tipo--peso">
+                                    <i class="fas fa-weight"></i> por {{ producto.unidad_peso }}
+                                </span>
+                            {% else %}
+                                <span class="sz-tienda-badge-tipo sz-tienda-badge-tipo--unidad">
+                                    <i class="fas fa-cube"></i> por unidad
+                                </span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ ('tienda/producto/' ~ producto.id)|url }}" class="sz-producto-nombre">
+                            {{ producto.nombre }}
+                        </a>
+                        <div class="sz-producto-footer">
+                            {# Precio con o sin promoción #}
+                            {% if producto.promo and producto.promo.tipo != 'cantidad_minima' %}
+                                <div class="sz-tienda-precios">
+                                    <span class="sz-tienda-precio-original">
+                                        {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}{% if producto.venta_por_peso %} / {{ producto.unidad_peso }}{% endif %}
+                                    </span>
+                                    <span class="sz-tienda-precio-promo">
+                                        {% if producto.promo.tipo == '2x1' %}
+                                            2×{{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}
+                                        {% else %}
+                                            {{ _cfg.simbolo }}{{ producto.promo.precio_final|number_format(2, '.', ',') }}{% if producto.venta_por_peso %} / {{ producto.unidad_peso }}{% endif %}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            {% elseif producto.promo and producto.promo.tipo == 'cantidad_minima' %}
+                                <div class="sz-tienda-precios">
+                                    <span class="sz-producto-precio">
+                                        {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}{% if producto.venta_por_peso %} / {{ producto.unidad_peso }}{% endif %}
+                                    </span>
+                                    <small class="sz-tienda-promo-hint">
+                                        {{ producto.promo.valor }}% off x{{ producto.promo.cantidad_min }}+
+                                    </small>
+                                </div>
+                            {% else %}
+                                <span class="sz-producto-precio">
+                                    {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}{% if producto.venta_por_peso %} / {{ producto.unidad_peso }}{% endif %}
+                                </span>
+                            {% endif %}
+
+                            {% if producto.venta_por_peso %}
+                                <button class="sz-btn-agregar"
+                                        onclick="mostrarModalPesoTienda(
+                                            {{ producto.id }},
+                                            '{{ producto.nombre|replace({"'": "\\'"}) }}',
+                                            {{ producto.precio_venta }},
+                                            {{ producto.promo ? producto.promo|json_encode|raw : 'null' }},
+                                            '{{ producto.unidad_peso }}'
+                                        )" title="Indicar cantidad">
+                                    <i class="fas fa-weight"></i>
+                                </button>
+                            {% else %}
+                                <button class="sz-btn-agregar"
+                                        onclick="agregarAlCarritoTienda(
+                                            {{ producto.id }},
+                                            '{{ producto.nombre|replace({"'": "\\'"}) }}',
+                                            {{ producto.precio_venta }},
+                                            {{ producto.promo ? producto.promo|json_encode|raw : 'null' }}
+                                        )">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {# Paginación #}
+            {% if total_pages > 1 %}
+            <div class="sz-paginacion mt-4">
+                {% if pagina > 1 %}
+                <a href="?pagina={{ pagina - 1 }}{% if categoria_actual %}&categoria={{ categoria_actual.id }}{% endif %}" class="sz-page-btn">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                {% endif %}
+                {% for i in 1..total_pages %}
+                    {% if i == pagina %}
+                        <span class="sz-page-btn sz-page-btn--active">{{ i }}</span>
+                    {% elseif i == 1 or i == total_pages or (i >= pagina - 2 and i <= pagina + 2) %}
+                        <a href="?pagina={{ i }}{% if categoria_actual %}&categoria={{ categoria_actual.id }}{% endif %}" class="sz-page-btn">{{ i }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if pagina < total_pages %}
+                <a href="?pagina={{ pagina + 1 }}{% if categoria_actual %}&categoria={{ categoria_actual.id }}{% endif %}" class="sz-page-btn">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-search fa-3x mb-3" style="color:var(--sz-border)"></i>
+                <p class="text-muted">No se encontraron productos</p>
+                <a href="{{ 'tienda/catalogo'|url }}" class="btn btn-outline-secondary mt-2">Ver todos</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

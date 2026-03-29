@@ -1,0 +1,205 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">{{ title }}</h1>
+            <p class="sz-dash-sub">
+                <a href="{{ 'clientes'|url }}" class="sz-back-link">
+                    <i class="fas fa-arrow-left mr-1"></i> Volver a clientes
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <form id="formCliente">
+        <input type="hidden" name="id" value="{{ model.id }}">
+
+        <div class="row">
+            <div class="col-lg-8">
+
+                {# Datos personales #}
+                <div class="sz-dash-card animate-in mb-3" style="--delay:.05s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-user"></i> Datos personales</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="nombre">Nombre *</label>
+                                    <input type="text" class="form-control" id="nombre" name="nombre"
+                                           value="{{ model.nombre }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="apellido">Apellido *</label>
+                                    <input type="text" class="form-control" id="apellido" name="apellido"
+                                           value="{{ model.apellido }}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="email">Correo electrónico *</label>
+                                    <input type="email" class="form-control" id="email" name="email"
+                                           value="{{ model.email }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="telefono">Teléfono</label>
+                                    <input type="text" class="form-control" id="telefono" name="telefono"
+                                           value="{{ model.telefono }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="fecha_nacimiento">Fecha de nacimiento</label>
+                                    <input type="date" class="form-control" id="fecha_nacimiento"
+                                           name="fecha_nacimiento" value="{{ model.fecha_nacimiento }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="rfc">RFC</label>
+                                    <input type="text" class="form-control" id="rfc" name="rfc"
+                                           value="{{ model.rfc }}" maxlength="13"
+                                           style="text-transform:uppercase">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="direccion">Dirección</label>
+                            <textarea class="form-control" id="direccion" name="direccion"
+                                      rows="2">{{ model.direccion }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                {# Contraseña #}
+                <div class="sz-dash-card animate-in" style="--delay:.1s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-lock"></i> Acceso</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="form-group mb-0">
+                            <label for="password">
+                                Contraseña
+                                {% if model.id %}
+                                    <small class="text-muted font-weight-normal">(dejar vacío para no cambiar)</small>
+                                {% else %}
+                                    <small class="text-muted font-weight-normal">(por defecto: cliente123)</small>
+                                {% endif %}
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password"
+                                   placeholder="Mínimo 6 caracteres"
+                                   {% if not model.id %}required{% endif %}>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-lg-4">
+
+                {# Avatar preview #}
+                <div class="sz-dash-card animate-in mb-3" style="--delay:.15s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-id-card"></i> Resumen</span>
+                    </div>
+                    <div class="p-4 text-center">
+                        <div class="sz-emp-avatar-lg mx-auto mb-3" id="avatarPreview">
+                            {% if model.nombre %}
+                                {{ model.nombre|slice(0,1)|upper }}{{ model.apellido|slice(0,1)|upper }}
+                            {% else %}??{% endif %}
+                        </div>
+                        <p class="sz-prod-nombre" id="nombrePreview">
+                            {{ model.nombre ? (model.nombre ~ ' ' ~ model.apellido) : 'Nombre del cliente' }}
+                        </p>
+                        <p class="sz-prod-desc" id="emailPreview">{{ model.email ?? 'correo@ejemplo.com' }}</p>
+                        {% if model.id %}
+                        <div class="mt-2">
+                            <a href="{{ ('clientes/perfil/' ~ model.id)|url }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-eye mr-1"></i> Ver perfil
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="sz-dash-card animate-in" style="--delay:.2s">
+                    <div class="p-3">
+                        <button type="submit" class="btn btn-sz btn-block" id="btnGuardar">
+                            <i class="fas fa-save mr-2"></i> Guardar cliente
+                        </button>
+                        <a href="{{ 'clientes'|url }}" class="btn btn-outline-secondary btn-block mt-2">
+                            Cancelar
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    // Preview nombre
+    function actualizarPreview() {
+        const nombre   = $('#nombre').val().trim();
+        const apellido = $('#apellido').val().trim();
+        const email    = $('#email').val().trim();
+        const ini1     = nombre   ? nombre.charAt(0).toUpperCase()   : '?';
+        const ini2     = apellido ? apellido.charAt(0).toUpperCase() : '?';
+
+        $('#avatarPreview').text(ini1 + ini2);
+        $('#nombrePreview').text((nombre + ' ' + apellido).trim() || 'Nombre del cliente');
+        $('#emailPreview').text(email || 'correo@ejemplo.com');
+    }
+
+    $('#nombre, #apellido, #email').on('input', actualizarPreview);
+    $('#rfc').on('input', function () { $(this).val($(this).val().toUpperCase()); });
+
+    // Guardar
+    $('#formCliente').on('submit', function (e) {
+        e.preventDefault();
+
+        $('#btnGuardar').prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...');
+
+        $.ajax({
+            url: base_url('clientes/guardar'), method: 'POST',
+            data: $(this).serialize(), dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    redirect(res.href || 'clientes');
+                } else {
+                    alert(res.message || 'Error al guardar');
+                    $('#btnGuardar').prop('disabled', false)
+                        .html('<i class="fas fa-save mr-2"></i> Guardar cliente');
+                }
+            },
+            error: function () {
+                alert('Error de conexión');
+                $('#btnGuardar').prop('disabled', false)
+                    .html('<i class="fas fa-save mr-2"></i> Guardar cliente');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

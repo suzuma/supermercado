@@ -1,0 +1,205 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Empleados</h1>
+            <p class="sz-dash-sub">{{ total }} empleado{{ total != 1 ? 's' : '' }} activo{{ total != 1 ? 's' : '' }}</p>
+        </div>
+        <a href="{{ 'empleados/formulario'|url }}" class="btn btn-sz">
+            <i class="fas fa-user-plus mr-2"></i> Nuevo empleado
+        </a>
+    </div>
+
+    {# Filtros #}
+    <div class="sz-filtros animate-in" style="--delay:.05s">
+        <form method="GET" action="{{ 'empleados'|url }}" class="sz-filtros-form">
+            <div class="sz-filtro-group">
+                <div class="sz-search-wrap">
+                    <i class="fas fa-search sz-search-icon"></i>
+                    <input type="text" name="busqueda" value="{{ busqueda }}"
+                           placeholder="Buscar por nombre o correo..."
+                           class="sz-search-input">
+                </div>
+            </div>
+            <div class="sz-filtro-group" style="max-width:200px">
+                <select name="turno" class="sz-select">
+                    <option value="">Todos los turnos</option>
+                    <option value="matutino"   {% if turno == 'matutino' %}selected{% endif %}>Matutino</option>
+                    <option value="vespertino" {% if turno == 'vespertino' %}selected{% endif %}>Vespertino</option>
+                    <option value="nocturno"   {% if turno == 'nocturno' %}selected{% endif %}>Nocturno</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sz">
+                <i class="fas fa-filter mr-1"></i> Filtrar
+            </button>
+            {% if busqueda or turno %}
+            <a href="{{ 'empleados'|url }}" class="btn btn-outline-secondary">
+                <i class="fas fa-times mr-1"></i> Limpiar
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    {# Tabla #}
+    <div class="sz-dash-card animate-in" style="--delay:.1s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-users"></i> Lista de empleados</span>
+        </div>
+
+        {% if datos|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Empleado</th>
+                        <th>Puesto</th>
+                        <th>Rol sistema</th>
+                        <th class="text-center">Turno</th>
+                        <th class="text-right">Salario</th>
+                        <th>Ingreso</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in datos %}
+                    <tr>
+                        <td>
+                            <div class="sz-emp-info">
+                                <div class="sz-emp-avatar">
+                                    {{ emp.usuario.nombre|slice(0,1)|upper }}{{ emp.usuario.apellido|slice(0,1)|upper }}
+                                </div>
+                                <div>
+                                    <span class="sz-prod-nombre">{{ emp.usuario.nombre }} {{ emp.usuario.apellido }}</span>
+                                    <small class="sz-prod-desc">{{ emp.usuario.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ emp.puesto }}</td>
+                        <td>
+                            <span class="sz-badge-cat">{{ emp.usuario.rol.nombre ?? '—' }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="sz-turno-badge sz-turno--{{ emp.turno }}">
+                                {{ emp.turno|capitalize }}
+                            </span>
+                        </td>
+                        <td class="text-right">${{ emp.salario|number_format(2, '.', ',') }}</td>
+                        <td>{{ emp.fecha_ingreso|date('d/m/Y') }}</td>
+                        <td class="text-center">
+                            <a href="{{ ('empleados/asistencia/' ~ emp.id)|url }}"
+                               class="btn btn-sm btn-outline-secondary mr-1" title="Asistencia">
+                                <i class="fas fa-calendar-check"></i>
+                            </a>
+                            <a href="{{ ('empleados/formulario/' ~ emp.id)|url }}"
+                               class="btn btn-sm btn-outline-secondary mr-1" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger btn-desactivar"
+                                    data-id="{{ emp.id }}"
+                                    data-nombre="{{ emp.usuario.nombre }} {{ emp.usuario.apellido }}"
+                                    title="Desactivar">
+                                <i class="fas fa-user-slash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# Paginación #}
+        {% if total_pages > 1 %}
+        <div class="sz-paginacion">
+            {% if pagina > 1 %}
+            <a href="{{ 'empleados'|url }}?pagina={{ pagina - 1 }}{% if turno %}&turno={{ turno }}{% endif %}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}" class="sz-page-btn">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            {% for i in 1..total_pages %}
+                {% if i == pagina %}
+                    <span class="sz-page-btn sz-page-btn--active">{{ i }}</span>
+                {% elseif i == 1 or i == total_pages or (i >= pagina - 2 and i <= pagina + 2) %}
+                    <a href="{{ 'empleados'|url }}?pagina={{ i }}{% if turno %}&turno={{ turno }}{% endif %}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}" class="sz-page-btn">{{ i }}</a>
+                {% elseif i == pagina - 3 or i == pagina + 3 %}
+                    <span class="sz-page-dots">…</span>
+                {% endif %}
+            {% endfor %}
+            {% if pagina < total_pages %}
+            <a href="{{ 'empleados'|url }}?pagina={{ pagina + 1 }}{% if turno %}&turno={{ turno }}{% endif %}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}" class="sz-page-btn">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="sz-empty" style="padding:3rem">
+            <i class="fas fa-users fa-2x mb-3 d-block" style="color:var(--sz-border)"></i>
+            No se encontraron empleados
+            {% if busqueda or turno %}<a href="{{ 'empleados'|url }}">Ver todos</a>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{# Modal desactivar #}
+<div class="modal fade" id="modalDesactivar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Desactivar empleado</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                ¿Deseas desactivar a <strong id="nombreEmpleado"></strong>?
+                El empleado perderá acceso al sistema.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarDesactivar">
+                    <i class="fas fa-user-slash mr-1"></i> Desactivar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    let idDesactivar = null;
+
+    $(document).on('click', '.btn-desactivar', function () {
+        idDesactivar = $(this).data('id');
+        $('#nombreEmpleado').text($(this).data('nombre'));
+        $('#modalDesactivar').modal('show');
+    });
+
+    $('#btnConfirmarDesactivar').on('click', function () {
+        if (!idDesactivar) return;
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Desactivando...');
+
+        $.ajax({
+            url:      base_url('empleados/desactivar'),
+            method:   'POST',
+            data:     { id: idDesactivar },
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) { $('#modalDesactivar').modal('hide'); location.reload(); }
+                else alert(res.message);
+            },
+            error: function () { alert('Error al desactivar'); },
+            complete: function () {
+                $('#btnConfirmarDesactivar').prop('disabled', false)
+                    .html('<i class="fas fa-user-slash mr-1"></i> Desactivar');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,239 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">{{ title }}</h1>
+            <p class="sz-dash-sub">
+                <a href="{{ 'empleados'|url }}" class="sz-back-link">
+                    <i class="fas fa-arrow-left mr-1"></i> Volver a empleados
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <form id="formEmpleado">
+        <input type="hidden" name="empleado_id" value="{{ empleado.id }}">
+
+        <div class="row">
+
+            {# Datos personales y acceso #}
+            <div class="col-lg-8">
+                <div class="sz-dash-card animate-in mb-3" style="--delay:.05s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-user"></i> Datos personales</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="nombre">Nombre *</label>
+                                    <input type="text" class="form-control" id="nombre" name="nombre"
+                                           value="{{ empleado.usuario.nombre }}" placeholder="Nombre" required>
+                                    <span class="form-validation-failed" id="err-nombre"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="apellido">Apellido *</label>
+                                    <input type="text" class="form-control" id="apellido" name="apellido"
+                                           value="{{ empleado.usuario.apellido }}" placeholder="Apellido" required>
+                                    <span class="form-validation-failed" id="err-apellido"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="email">Correo electrónico *</label>
+                                    <input type="email" class="form-control" id="email" name="email"
+                                           value="{{ empleado.usuario.email }}" placeholder="correo@ejemplo.com" required>
+                                    <span class="form-validation-failed" id="err-email"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="rol_id">Rol del sistema *</label>
+                                    <select class="form-control" id="rol_id" name="rol_id" required>
+                                        <option value="">Selecciona un rol</option>
+                                        {% for rol in roles %}
+                                        <option value="{{ rol.id }}" {% if empleado.usuario.rol_id == rol.id %}selected{% endif %}>
+                                            {{ rol.nombre }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <span class="form-validation-failed" id="err-rol_id"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="password">
+                                        Contraseña {% if not empleado.id %}*{% else %}(dejar vacío para no cambiar){% endif %}
+                                    </label>
+                                    <input type="password" class="form-control" id="password" name="password"
+                                           placeholder="Mínimo 6 caracteres"
+                                           {% if not empleado.id %}required{% endif %}>
+                                    <span class="form-validation-failed" id="err-password"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Datos laborales #}
+                <div class="sz-dash-card animate-in" style="--delay:.1s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-briefcase"></i> Datos laborales</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="puesto">Puesto *</label>
+                                    <input type="text" class="form-control" id="puesto" name="puesto"
+                                           value="{{ empleado.puesto }}" placeholder="Ej. Cajero, Almacenista" required>
+                                    <span class="form-validation-failed" id="err-puesto"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="salario">Salario mensual *</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text sz-input-prefix">$</span>
+                                        </div>
+                                        <input type="number" class="form-control" id="salario" name="salario"
+                                               value="{{ empleado.salario }}" step="0.01" min="0"
+                                               placeholder="0.00" required>
+                                    </div>
+                                    <span class="form-validation-failed" id="err-salario"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="fecha_ingreso">Fecha de ingreso *</label>
+                                    <input type="date" class="form-control" id="fecha_ingreso" name="fecha_ingreso"
+                                           value="{{ empleado.fecha_ingreso }}" required>
+                                    <span class="form-validation-failed" id="err-fecha_ingreso"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="turno">Turno *</label>
+                                    <select class="form-control" id="turno" name="turno" required>
+                                        <option value="">Selecciona un turno</option>
+                                        <option value="matutino"   {% if empleado.turno == 'matutino' %}selected{% endif %}>Matutino</option>
+                                        <option value="vespertino" {% if empleado.turno == 'vespertino' %}selected{% endif %}>Vespertino</option>
+                                        <option value="nocturno"   {% if empleado.turno == 'nocturno' %}selected{% endif %}>Nocturno</option>
+                                    </select>
+                                    <span class="form-validation-failed" id="err-turno"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Panel lateral — resumen y acciones #}
+            <div class="col-lg-4">
+                <div class="sz-dash-card animate-in" style="--delay:.15s">
+                    <div class="sz-card-header">
+                        <span class="sz-card-title"><i class="fas fa-id-badge"></i> Resumen</span>
+                    </div>
+                    <div class="p-4">
+                        {# Avatar preview #}
+                        <div class="sz-emp-avatar-lg mx-auto mb-3" id="avatarPreview">
+                            {{ empleado.usuario.nombre ? (empleado.usuario.nombre|slice(0,1)|upper ~ empleado.usuario.apellido|slice(0,1)|upper) : '??' }}
+                        </div>
+                        <p class="text-center sz-prod-nombre" id="nombrePreview">
+                            {{ empleado.usuario.nombre ?? 'Nombre' }} {{ empleado.usuario.apellido ?? 'Apellido' }}
+                        </p>
+                        <p class="text-center sz-prod-desc" id="puestoPreview">
+                            {{ empleado.puesto ?? 'Puesto' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="sz-dash-card animate-in mt-3" style="--delay:.2s">
+                    <div class="p-3">
+                        <button type="submit" class="btn btn-sz btn-block" id="btnGuardar">
+                            <i class="fas fa-save mr-2"></i> Guardar empleado
+                        </button>
+                        <a href="{{ 'empleados'|url }}" class="btn btn-outline-secondary btn-block mt-2">
+                            Cancelar
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    // Preview nombre en el panel lateral
+    function actualizarPreview() {
+        const nombre   = $('#nombre').val() || 'Nombre';
+        const apellido = $('#apellido').val() || 'Apellido';
+        const puesto   = $('#puesto').val() || 'Puesto';
+        const ini1     = nombre.charAt(0).toUpperCase();
+        const ini2     = apellido.charAt(0).toUpperCase();
+
+        $('#avatarPreview').text(ini1 + ini2);
+        $('#nombrePreview').text(nombre + ' ' + apellido);
+        $('#puestoPreview').text(puesto);
+    }
+
+    $('#nombre, #apellido, #puesto').on('input', actualizarPreview);
+
+    // Submit
+    $('#formEmpleado').on('submit', function (e) {
+        e.preventDefault();
+        $('.form-validation-failed').text('');
+
+        $('#btnGuardar').prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...');
+
+        $.ajax({
+            url:      base_url('empleados/guardar'),
+            method:   'POST',
+            data:     $(this).serialize(),
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    redirect(res.href || 'empleados');
+                } else if (res.validations) {
+                    $.each(res.validations, function (campo, msg) {
+                        if (msg) $('#err-' + campo).text(msg);
+                    });
+                    $('#btnGuardar').prop('disabled', false)
+                        .html('<i class="fas fa-save mr-2"></i> Guardar empleado');
+                } else {
+                    alert(res.message || 'Error al guardar');
+                    $('#btnGuardar').prop('disabled', false)
+                        .html('<i class="fas fa-save mr-2"></i> Guardar empleado');
+                }
+            },
+            error: function () {
+                alert('Error de conexión');
+                $('#btnGuardar').prop('disabled', false)
+                    .html('<i class="fas fa-save mr-2"></i> Guardar empleado');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

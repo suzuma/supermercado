@@ -1,0 +1,505 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    {# Encabezado #}
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Inventario</h1>
+            <p class="sz-dash-sub">{{ total }} producto{{ total != 1 ? 's' : '' }} registrado{{ total != 1 ? 's' : '' }}</p>
+        </div>
+        <a href="{{ 'inventario/formulario'|url }}" class="btn btn-sz">
+            <i class="fas fa-plus mr-2"></i> Nuevo producto
+        </a>
+    </div>
+
+    {# Alertas de stock bajo #}
+    {% if alertas|length > 0 %}
+    <div class="sz-alerta-stock animate-in" style="--delay:.05s">
+        <div class="sz-alerta-stock-header">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>{{ alertas|length }} producto{{ alertas|length != 1 ? 's' : '' }} con stock bajo o agotado{{ alertas|length != 1 ? 's' : '' }}</span>
+        </div>
+        <div class="sz-alerta-stock-list">
+            {% for p in alertas %}
+            <span class="sz-alerta-item {% if p.stock == 0 %}sz-alerta-item--danger{% else %}sz-alerta-item--warn{% endif %}">
+                {{ p.nombre }} — <strong>{% if p.venta_por_peso %}{{ p.stock|number_format(3, '.', ',') }} {{ p.unidad_peso }}{% else %}{{ p.stock }} uds.{% endif %}</strong>
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Alertas de caducidad #}
+    {% if alertas_caducidad|length > 0 %}
+    <div class="sz-alerta-caduca animate-in" style="--delay:.08s">
+        <div class="sz-alerta-stock-header">
+            <i class="fas fa-calendar-times"></i>
+            <span>{{ alertas_caducidad|length }} producto{{ alertas_caducidad|length != 1 ? 's' : '' }} vencido{{ alertas_caducidad|length != 1 ? 's' : '' }} o próximo{{ alertas_caducidad|length != 1 ? 's' : '' }} a vencer</span>
+        </div>
+        <div class="sz-alerta-stock-list">
+            {% for p in alertas_caducidad %}
+            <span class="sz-alerta-item sz-alerta-item--{{ p.estado_caducidad == 'vencido' ? 'danger' : (p.estado_caducidad == 'critico' ? 'danger' : 'warn') }}"
+                  title="{{ p.estado_caducidad == 'vencido' ? 'Vencido hace ' ~ (p.dias_para_vencer * -1) ~ ' día(s)' : 'Vence en ' ~ p.dias_para_vencer ~ ' día(s)' }}">
+                {{ p.nombre }} —
+                <strong>
+                    {% if p.estado_caducidad == 'vencido' %}
+                        Vencido
+                    {% else %}
+                        {{ p.fecha_caducidad|date('d/m/Y') }}
+                    {% endif %}
+                </strong>
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Filtros #}
+    <div class="sz-filtros animate-in" style="--delay:.1s">
+        <form method="GET" action="{{ 'inventario'|url }}" class="sz-filtros-form">
+            <div class="sz-filtro-group">
+                <div class="sz-search-wrap">
+                    <i class="fas fa-search sz-search-icon"></i>
+                    <input type="text" name="busqueda" value="{{ busqueda }}"
+                           placeholder="Buscar por nombre o código de barras..."
+                           class="sz-search-input">
+                </div>
+            </div>
+            <div class="sz-filtro-group">
+                <select name="categoria" class="sz-select">
+                    <option value="">Todas las categorías</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat.id }}" {% if cat_seleccionada == cat.id %}selected{% endif %}>
+                        {{ cat.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sz">
+                <i class="fas fa-filter mr-1"></i> Filtrar
+            </button>
+            {% if busqueda or cat_seleccionada %}
+            <a href="{{ 'inventario'|url }}" class="btn btn-outline-secondary">
+                <i class="fas fa-times mr-1"></i> Limpiar
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    {# Tabla de productos #}
+    <div class="sz-dash-card animate-in" style="--delay:.15s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-boxes"></i> Productos</span>
+            <div class="sz-etiquetas-toolbar" id="etiquetasToolbar" style="display:none">
+                <span id="etiquetasContador" class="text-muted" style="font-size:.85rem"></span>
+                <button class="btn btn-sm btn-sz" id="btnImprimirSeleccionados">
+                    <i class="fas fa-barcode mr-1"></i> Imprimir etiquetas
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="btnDeseleccionar">
+                    Deseleccionar
+                </button>
+            </div>
+        </div>
+
+        {% if datos|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:32px">
+                            <input type="checkbox" id="chkTodos" title="Seleccionar todos">
+                        </th>
+                        <th style="width:60px">Imagen</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Código</th>
+                        <th class="text-right">P. Compra</th>
+                        <th class="text-right">P. Venta</th>
+                        <th class="text-center">Stock</th>
+                        <th class="text-center">Caducidad</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in datos %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="chk-producto" value="{{ producto.id }}">
+                        </td>
+                        <td>
+                            {% if producto.imagen %}
+                                <img src="{{ ('images/productos/' ~ producto.imagen)|public }}"
+                                     class="sz-prod-thumb" alt="{{ producto.nombre }}">
+                            {% else %}
+                                <div class="sz-prod-thumb-empty">
+                                    <i class="fas fa-image"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="sz-prod-nombre">{{ producto.nombre }}</span>
+                            {% if producto.venta_por_peso %}
+                                <span class="sz-badge-tipo sz-badge-tipo--peso" title="Se vende por peso">
+                                    <i class="fas fa-weight mr-1"></i>por {{ producto.unidad_peso }}
+                                </span>
+                            {% else %}
+                                <span class="sz-badge-tipo sz-badge-tipo--unidad" title="Se vende por unidad">
+                                    <i class="fas fa-cube mr-1"></i>por unidad
+                                </span>
+                            {% endif %}
+                            {% if producto.descripcion %}
+                                <small class="sz-prod-desc">
+                                    {{ producto.descripcion|slice(0, 60) }}{% if producto.descripcion|length > 60 %}...{% endif %}
+                                </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="sz-badge-cat">{{ producto.categoria.nombre ?? '—' }}</span>
+                        </td>
+                        <td>
+                            <code class="sz-codigo">{{ producto.codigo_barras ?? '—' }}</code>
+                        </td>
+                        <td class="text-right">
+                            {{ _cfg.simbolo }}{{ producto.precio_compra|number_format(2, '.', ',') }}
+                        </td>
+                        <td class="text-right">
+                            {% if producto.promocion_vigente %}
+                                {# Precio original tachado #}
+                                <small style="text-decoration:line-through;color:var(--sz-muted)">
+                                    {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}
+                                </small>
+                                <br>
+                                {# Precio con promo #}
+                                {% if producto.promocion_vigente.tipo == 'precio_fijo' %}
+                                    <strong style="color:var(--sz-accent)">
+                                        {{ _cfg.simbolo }}{{ producto.promocion_vigente.valor|number_format(2, '.', ',') }}
+                                    </strong>
+                                {% elseif producto.promocion_vigente.tipo == '2x1' %}
+                                    <strong style="color:var(--sz-accent)">
+                                        {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}
+                                    </strong>
+                                {% else %}
+                                    <strong style="color:var(--sz-accent)">
+                                        {{ _cfg.simbolo }}{{ (producto.precio_venta * (1 - producto.promocion_vigente.valor / 100))|number_format(2, '.', ',') }}
+                                    </strong>
+                                {% endif %}
+                                <br>
+                                {# Badge de tipo de promo #}
+                                {% if producto.promocion_vigente.tipo == 'porcentaje' %}
+                                    <span class="sz-promo-badge sz-promo--pct">
+                                        {{ producto.promocion_vigente.valor }}% off
+                                    </span>
+                                {% elseif producto.promocion_vigente.tipo == 'precio_fijo' %}
+                                    <span class="sz-promo-badge sz-promo--fijo">
+                                        Precio especial
+                                    </span>
+                                {% elseif producto.promocion_vigente.tipo == '2x1' %}
+                                    <span class="sz-promo-badge sz-promo--2x1">
+                                        2×1
+                                    </span>
+                                {% else %}
+                                    <span class="sz-promo-badge sz-promo--cant">
+                                        {{ producto.promocion_vigente.valor }}% x{{ producto.promocion_vigente.cantidad_min }}+
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="sz-stock-badge {% if producto.stock == 0 %}sz-badge--danger{% elseif producto.stock <= producto.stock_minimo %}sz-badge--warn{% else %}sz-badge--ok{% endif %}">
+                                {% if producto.venta_por_peso %}
+                                    {{ producto.stock|number_format(3, '.', ',') }} {{ producto.unidad_peso }}
+                                {% else %}
+                                    {{ producto.stock }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            {% if producto.fecha_caducidad %}
+                                <span class="sz-caduca-badge sz-caduca--{{ producto.estado_caducidad }}"
+                                      title="{{ producto.estado_caducidad == 'vencido' ? 'Vencido hace ' ~ (producto.dias_para_vencer * -1) ~ ' día(s)' : 'Vence en ' ~ producto.dias_para_vencer ~ ' día(s)' }}">
+                                    {{ producto.fecha_caducidad|date('d/m/Y') }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ ('inventario/formulario/' ~ producto.id)|url }}"
+                               class="btn btn-sm btn-outline-secondary mr-1" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-secondary mr-1 btn-etiqueta"
+                                    data-id="{{ producto.id }}"
+                                    data-nombre="{{ producto.nombre }}"
+                                    data-codigo="{{ producto.codigo_barras }}"
+                                    data-precio="{{ producto.precio_venta }}"
+                                    title="Etiqueta / código de barras">
+                                <i class="fas fa-barcode"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger btn-eliminar"
+                                    data-id="{{ producto.id }}"
+                                    data-nombre="{{ producto.nombre }}"
+                                    title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# Paginación #}
+        {% if total_pages > 1 %}
+        <div class="sz-paginacion">
+            {% if pagina > 1 %}
+            <a href="{{ 'inventario'|url }}?pagina={{ pagina - 1 }}{% if cat_seleccionada %}&categoria={{ cat_seleccionada }}{% endif %}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}"
+               class="sz-page-btn">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+
+            {% for i in 1..total_pages %}
+                {% if i == pagina %}
+                    <span class="sz-page-btn sz-page-btn--active">{{ i }}</span>
+                {% elseif i == 1 or i == total_pages or (i >= pagina - 2 and i <= pagina + 2) %}
+                    <a href="{{ 'inventario'|url }}?pagina={{ i }}{% if cat_seleccionada %}&categoria={{ cat_seleccionada }}{% endif %}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}"
+                       class="sz-page-btn">{{ i }}</a>
+                {% elseif i == pagina - 3 or i == pagina + 3 %}
+                    <span class="sz-page-dots">…</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagina < total_pages %}
+            <a href="{{ 'inventario'|url }}?pagina={{ pagina + 1 }}{% if cat_seleccionada %}&categoria={{ cat_seleccionada }}{% endif %}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}"
+               class="sz-page-btn">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="sz-empty" style="padding: 3rem">
+            <i class="fas fa-box-open fa-2x mb-3 d-block" style="color: var(--sz-border)"></i>
+            No se encontraron productos
+            {% if busqueda or cat_seleccionada %}
+                con los filtros aplicados.
+                <a href="{{ 'inventario'|url }}">Ver todos</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{# Modal etiqueta / código de barras #}
+<div class="modal fade" id="modalEtiqueta" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-barcode mr-2"></i>Etiqueta de producto</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body text-center">
+                <p id="etiquetaNombre" class="font-weight-bold mb-3"></p>
+                <div id="etiquetaBarcode"></div>
+                <p id="etiquetaSinCodigo" class="text-muted" style="display:none">
+                    Este producto no tiene código de barras.
+                </p>
+                <p id="etiquetaCodigo" class="text-monospace small mt-2 text-muted"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="btnGenerarCodigo" style="display:none">
+                    <i class="fas fa-magic mr-1"></i> Generar código
+                </button>
+                <button type="button" class="btn btn-sz" id="btnImprimirEtiqueta" style="display:none">
+                    <i class="fas fa-print mr-1"></i> Imprimir etiqueta
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Modal confirmación eliminar #}
+<div class="modal fade" id="modalEliminar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar eliminación</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                ¿Deseas eliminar el producto <strong id="nombreProducto"></strong>?
+                Esta acción lo desactivará del sistema.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarEliminar">
+                    <i class="fas fa-trash mr-1"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ 'js/jsbarcode.min.js'|public }}"></script>
+<script>
+$(document).ready(function () {
+    let idEliminar      = null;
+    let productoActual  = {};
+
+    // ── Eliminar ───────────────────────────────────────────
+    $(document).on('click', '.btn-eliminar', function () {
+        idEliminar = $(this).data('id');
+        $('#nombreProducto').text($(this).data('nombre'));
+        $('#modalEliminar').modal('show');
+    });
+
+    $('#btnConfirmarEliminar').on('click', function () {
+        if (!idEliminar) return;
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Eliminando...');
+
+        $.ajax({
+            url:      base_url('inventario/eliminar'),
+            method:   'POST',
+            data:     { id: idEliminar },
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    $('#modalEliminar').modal('hide');
+                    location.reload();
+                } else {
+                    alert(res.message);
+                }
+            },
+            error: function () { alert('Error al eliminar el producto'); },
+            complete: function () {
+                $('#btnConfirmarEliminar').prop('disabled', false)
+                    .html('<i class="fas fa-trash mr-1"></i> Eliminar');
+            }
+        });
+    });
+
+    // ── Modal etiqueta / código de barras ──────────────────
+    $(document).on('click', '.btn-etiqueta', function () {
+        productoActual = {
+            id:     $(this).data('id'),
+            nombre: $(this).data('nombre'),
+            codigo: $(this).data('codigo') || '',
+            precio: $(this).data('precio'),
+        };
+        mostrarModalEtiqueta(productoActual);
+    });
+
+    function mostrarModalEtiqueta(p) {
+        $('#etiquetaNombre').text(p.nombre);
+        $('#etiquetaBarcode').empty();
+        $('#etiquetaCodigo').text('');
+
+        if (p.codigo) {
+            $('#etiquetaSinCodigo').hide();
+            $('#btnGenerarCodigo').hide();
+            $('#btnImprimirEtiqueta').show();
+
+            const svg = $('<svg>').appendTo('#etiquetaBarcode');
+            JsBarcode(svg[0], p.codigo, {
+                format:      'CODE128',
+                width:       2,
+                height:      60,
+                fontSize:    12,
+                margin:      8,
+                displayValue: true,
+            });
+            $('#etiquetaCodigo').text(p.codigo);
+        } else {
+            $('#etiquetaSinCodigo').show();
+            $('#btnGenerarCodigo').show();
+            $('#btnImprimirEtiqueta').hide();
+        }
+
+        $('#modalEtiqueta').modal('show');
+    }
+
+    // Generar código automático
+    $('#btnGenerarCodigo').on('click', function () {
+        const btn = $(this).prop('disabled', true)
+                           .html('<i class="fas fa-spinner fa-spin mr-1"></i> Generando...');
+
+        $.ajax({
+            url:      base_url('inventario/generarCodigo'),
+            method:   'POST',
+            data:     { id: productoActual.id },
+            dataType: 'json',
+            success: function (res) {
+                if (res.response && res.result) {
+                    productoActual.codigo = res.result.codigo;
+                    // Actualizar data-codigo en el botón de la fila
+                    $(`.btn-etiqueta[data-id="${productoActual.id}"]`)
+                        .data('codigo', res.result.codigo);
+                    mostrarModalEtiqueta(productoActual);
+                } else {
+                    alert(res.message || 'No se pudo generar el código');
+                }
+            },
+            error: function () { alert('Error de conexión'); },
+            complete: function () {
+                btn.prop('disabled', false)
+                   .html('<i class="fas fa-magic mr-1"></i> Generar código');
+            }
+        });
+    });
+
+    // Imprimir etiqueta individual
+    $('#btnImprimirEtiqueta').on('click', function () {
+        window.open(base_url('inventario/imprimirEtiquetas?ids=' + productoActual.id), '_blank');
+    });
+
+    // ── Selección múltiple para impresión masiva ───────────
+    function actualizarToolbar() {
+        const ids = $('.chk-producto:checked').map(function () { return $(this).val(); }).get();
+        if (ids.length > 0) {
+            $('#etiquetasToolbar').show();
+            $('#etiquetasContador').text(ids.length + ' producto' + (ids.length !== 1 ? 's' : '') + ' seleccionado' + (ids.length !== 1 ? 's' : ''));
+        } else {
+            $('#etiquetasToolbar').hide();
+        }
+    }
+
+    $('#chkTodos').on('change', function () {
+        $('.chk-producto').prop('checked', $(this).is(':checked'));
+        actualizarToolbar();
+    });
+
+    $(document).on('change', '.chk-producto', function () {
+        const total    = $('.chk-producto').length;
+        const checked  = $('.chk-producto:checked').length;
+        $('#chkTodos').prop('indeterminate', checked > 0 && checked < total);
+        $('#chkTodos').prop('checked', checked === total);
+        actualizarToolbar();
+    });
+
+    $('#btnDeseleccionar').on('click', function () {
+        $('.chk-producto, #chkTodos').prop('checked', false);
+        $('#chkTodos').prop('indeterminate', false);
+        actualizarToolbar();
+    });
+
+    $('#btnImprimirSeleccionados').on('click', function () {
+        const ids = $('.chk-producto:checked').map(function () { return $(this).val(); }).get();
+        if (ids.length === 0) return;
+        window.open(base_url('inventario/imprimirEtiquetas?ids=' + ids.join(',')), '_blank');
+    });
+});
+</script>
+{% endblock %}
