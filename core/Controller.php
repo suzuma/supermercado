@@ -8,6 +8,7 @@ namespace Core;
 
 use App\Models\Configuracion;
 use App\Models\Producto;
+use App\Services\CacheService;
 
 class Controller {
     protected $provider;
@@ -49,22 +50,29 @@ class Controller {
         $segments = explode('/', trim(_CURRENT_URI_, '/'));
         $data['_route'] = $segments[0] ?? '';
 
-        // Conteo de productos con stock bajo (para badge en menú)
-        $stockBajoCount = 0;
-        try {
-            $stockBajoCount = Producto::activos()->stockBajo()->count();
-        } catch (\Exception $e) {}
+        // Stock bajo — se renueva cada 2 minutos (badge en menú)
+        $stockBajoCount = CacheService::remember('stock_bajo_count', 120, function () {
+            try {
+                return Producto::activos()->stockBajo()->count();
+            } catch (\Exception $e) {
+                return 0;
+            }
+        });
 
-        // Inyectar configuración global
-        $data['_cfg'] = [
-            'moneda'          => Configuracion::get('moneda', 'MXN'),
-            'simbolo'         => Configuracion::get('moneda', 'MXN') === 'USD' ? 'USD $' : '$',
-            'negocio_nombre'  => Configuracion::get('negocio_nombre', 'Supermercado Web'),
-            'negocio_tel'     => Configuracion::get('negocio_telefono'),
-            'ticket_mensaje'  => Configuracion::get('ticket_mensaje', '¡Gracias por su compra!'),
-            'negocio_logo'    => Configuracion::get('negocio_logo', 'logo_super.png'),
-            'stock_bajo_total' => $stockBajoCount,
-        ];
+        // Configuración global — se renueva cada 5 minutos, se invalida al guardar
+        $cfg = CacheService::remember('global_config', 300, function () {
+            $moneda = Configuracion::get('moneda', 'MXN');
+            return [
+                'moneda'         => $moneda,
+                'simbolo'        => $moneda === 'USD' ? 'USD $' : '$',
+                'negocio_nombre' => Configuracion::get('negocio_nombre', 'Supermercado Web'),
+                'negocio_tel'    => Configuracion::get('negocio_telefono'),
+                'ticket_mensaje' => Configuracion::get('ticket_mensaje', '¡Gracias por su compra!'),
+                'negocio_logo'   => Configuracion::get('negocio_logo', 'logo_super.png'),
+            ];
+        });
+
+        $data['_cfg'] = array_merge($cfg, ['stock_bajo_total' => $stockBajoCount]);
 
         // Sesión del cliente para la tienda
         $data['cliente_session'] = !empty($_SESSION['cliente_id']) ? (object)[
