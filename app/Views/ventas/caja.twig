@@ -328,7 +328,7 @@ $(document).ready(function () {
 
                     <div class="sz-prod-item-img">
                         ${p.imagen
-                            ? `<img src="${base_url('public/images/productos/' + p.imagen)}" alt="${p.nombre}">`
+                            ? `<img src="${base_url('public/images/productos/' + p.imagen)}" alt="${p.nombre}" width="56" height="56" loading="lazy">`
                             : `<i class="fas fa-box"></i>`}
                     </div>
 
