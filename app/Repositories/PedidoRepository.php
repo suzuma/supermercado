@@ -2,9 +2,10 @@
 namespace App\Repositories;
 
 use App\Helpers\{ResponseHelper, MailHelper};
-use App\Models\{Pedido, Configuracion};
+use App\Models\{Pedido, Producto, Configuracion};
 use Core\{Auth, Log};
 use Exception;
+use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Eloquent\Collection;
 
 class PedidoRepository
@@ -122,6 +123,42 @@ class PedidoRepository
         } catch (Exception $e) {
             Log::error(PedidoRepository::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo actualizar el estado');
+        }
+
+        return $rh;
+    }
+
+    // ── Cancelación por el propio cliente ────────────────────
+    public function cancelarPorCliente(int $pedidoId, int $clienteId): ResponseHelper
+    {
+        $rh = new ResponseHelper();
+
+        try {
+            $pedido = $this->model->with('detalles')->findOrFail($pedidoId);
+
+            if ((int)$pedido->cliente_id !== $clienteId) {
+                return $rh->setResponse(false, 'No tienes permiso para cancelar este pedido');
+            }
+
+            if ($pedido->estado !== 'pendiente') {
+                return $rh->setResponse(false, 'Solo puedes cancelar pedidos que aún estén pendientes');
+            }
+
+            Capsule::transaction(function () use ($pedido) {
+                foreach ($pedido->detalles as $detalle) {
+                    Producto::where('id', $detalle->producto_id)
+                        ->increment('stock', $detalle->cantidad);
+                }
+
+                $pedido->estado = 'cancelado';
+                $pedido->save();
+            });
+
+            $rh->setResponse(true, 'Tu pedido fue cancelado correctamente');
+            $this->notificarCliente($pedido->id, 'cancelado');
+        } catch (Exception $e) {
+            Log::error(PedidoRepository::class, $e->getMessage());
+            $rh->setResponse(false, 'No se pudo cancelar el pedido');
         }
 
         return $rh;

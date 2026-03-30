@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Models\{Categoria, Producto, Pedido, PedidoDetalle, Cliente};
@@ -10,9 +12,9 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 
 class TiendaController extends Controller
 {
-    private $productoRepo;
-    private $categoriaRepo;
-    private $promoRepo;
+    private ProductoRepository $productoRepo;
+    private CategoriaRepository $categoriaRepo;
+    private PromocionRepository $promoRepo;
 
     public function __construct()
     {
@@ -28,7 +30,7 @@ class TiendaController extends Controller
         foreach ($productos as $producto) {
             $promo = $this->promoRepo->obtenerDeProducto($producto->id);
             if ($promo) {
-                $calculo = $promo->calcularPrecio($producto->precio_venta, 1);
+                $calculo = $promo->calcularPrecio((float)$producto->precio_venta, 1);
                 $producto->promo = [
                     'id'           => $promo->id,
                     'nombre'       => $promo->nombre,
@@ -133,7 +135,7 @@ class TiendaController extends Controller
         // Adjuntar promo al producto principal
         $promo = $this->promoRepo->obtenerDeProducto($producto->id);
         if ($promo) {
-            $calculo = $promo->calcularPrecio($producto->precio_venta, 1);
+            $calculo = $promo->calcularPrecio((float)$producto->precio_venta, 1);
             $producto->promo = [
                 'id'           => $promo->id,
                 'nombre'       => $promo->nombre,
@@ -221,7 +223,7 @@ class TiendaController extends Controller
                 $promo = $this->promoRepo->obtenerDeProducto((int)$item['id']);
 
                 if ($promo) {
-                    $calculo              = $promo->calcularPrecio((float)$item['precio'], (int)$item['cantidad']);
+                    $calculo              = $promo->calcularPrecio((float)$item['precio'], (float)$item['cantidad']);
                     $item['subtotal']     = $calculo['subtotal'];
                     $item['precio_final'] = $calculo['precio_final'];
                     $item['promo_id']     = $promo->id;
@@ -240,6 +242,26 @@ class TiendaController extends Controller
             $clienteId = $this->getClienteActual()->id;
 
             Capsule::transaction(function () use ($items, $total, $direccion, $clienteId, $rh) {
+                // Bloquear filas y validar stock antes de cualquier escritura.
+                // lockForUpdate() emite SELECT ... FOR UPDATE, impidiendo que otra
+                // transacción concurrente lea el mismo stock hasta que ésta termine.
+                foreach ($items as $item) {
+                    $producto = Producto::lockForUpdate()->find((int)$item['id']);
+
+                    if (!$producto || !$producto->activo) {
+                        throw new \RuntimeException("El producto ya no está disponible");
+                    }
+
+                    if ($producto->stock < (float)$item['cantidad']) {
+                        $disponible = $producto->venta_por_peso
+                            ? number_format((float)$producto->stock, 3) . ' ' . $producto->unidad_peso
+                            : (int)$producto->stock . ' unidades';
+                        throw new \RuntimeException(
+                            "Stock insuficiente para \"{$producto->nombre}\". Solo hay {$disponible} disponibles"
+                        );
+                    }
+                }
+
                 $pedido                    = new Pedido();
                 $pedido->cliente_id        = $clienteId;
                 $pedido->total             = round($total, 2);
@@ -268,6 +290,8 @@ class TiendaController extends Controller
             if ($rh->response && !empty($rh->result['pedido_id'])) {
                 $this->enviarEmailConfirmacion((int)$rh->result['pedido_id']);
             }
+        } catch (\RuntimeException $e) {
+            $rh->setResponse(false, $e->getMessage());
         } catch (\Exception $e) {
             Log::error(TiendaController::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo procesar el pedido');
@@ -470,6 +494,177 @@ class TiendaController extends Controller
         }
 
         echo json_encode($rh);
+    }
+
+    // ── Cancelar pedido (cliente) ─────────────────────────────
+    public function postCancelarPedido(): void
+    {
+        $rh        = new ResponseHelper();
+        $pedidoId  = (int)($_POST['pedido_id'] ?? 0);
+
+        if (!$this->clienteLoggedIn()) {
+            echo json_encode($rh->setResponse(false, 'Debes iniciar sesión'));
+            return;
+        }
+
+        if ($pedidoId <= 0) {
+            echo json_encode($rh->setResponse(false, 'Pedido no válido'));
+            return;
+        }
+
+        $pedidoRepo = new PedidoRepository();
+        echo json_encode($pedidoRepo->cancelarPorCliente($pedidoId, (int)$_SESSION['cliente_id']));
+    }
+
+    // ── Recuperar contraseña ──────────────────────────────────
+    public function getRecuperar(): string
+    {
+        if ($this->clienteLoggedIn()) {
+            header('Location: ' . _BASE_HTTP_ . 'tienda');
+            exit;
+        }
+
+        return $this->render('tienda/recuperar.twig', [
+            'title' => 'Recuperar contraseña',
+            'menu'  => false,
+        ]);
+    }
+
+    public function postRecuperar(): void
+    {
+        $rh    = new ResponseHelper();
+        $email = trim($_POST['email'] ?? '');
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode($rh->setResponse(false, 'Ingresa un correo electrónico válido'));
+            return;
+        }
+
+        try {
+            $cliente = Cliente::where('email', $email)->where('activo', 1)->first();
+
+            if ($cliente) {
+                Capsule::table('password_resets_clientes')->where('email', $email)->delete();
+
+                $token     = bin2hex(random_bytes(32));
+                $expiresAt = date('Y-m-d H:i:s', strtotime('+60 minutes'));
+
+                Capsule::table('password_resets_clientes')->insert([
+                    'email'      => $email,
+                    'token'      => $token,
+                    'expires_at' => $expiresAt,
+                ]);
+
+                $this->enviarEmailRecuperar($cliente, $token);
+            }
+
+            // Respuesta genérica — no revelar si el email existe (anti-enumeración)
+            echo json_encode($rh->setResponse(true,
+                'Si el correo está registrado, recibirás un enlace en los próximos minutos'
+            ));
+        } catch (\Exception $e) {
+            Log::error(TiendaController::class, 'Recuperar password: ' . $e->getMessage());
+            echo json_encode($rh->setResponse(false, 'No se pudo procesar la solicitud'));
+        }
+    }
+
+    public function getNuevaPassword(string $token): string
+    {
+        $reset = Capsule::table('password_resets_clientes')
+            ->where('token', $token)
+            ->where('expires_at', '>=', date('Y-m-d H:i:s'))
+            ->first();
+
+        if (!$reset) {
+            return $this->render('tienda/recuperar.twig', [
+                'title'        => 'Enlace inválido',
+                'menu'         => false,
+                'tokenInvalid' => true,
+            ]);
+        }
+
+        return $this->render('tienda/nueva_password.twig', [
+            'title' => 'Nueva contraseña',
+            'menu'  => false,
+            'token' => $token,
+        ]);
+    }
+
+    public function postNuevaPassword(): void
+    {
+        $rh       = new ResponseHelper();
+        $token    = trim($_POST['token']           ?? '');
+        $password = $_POST['password']             ?? '';
+        $confirm  = $_POST['password_confirm']     ?? '';
+
+        if (empty($token) || empty($password)) {
+            echo json_encode($rh->setResponse(false, 'Datos incompletos'));
+            return;
+        }
+
+        if (strlen($password) < 6) {
+            echo json_encode($rh->setResponse(false, 'La contraseña debe tener mínimo 6 caracteres'));
+            return;
+        }
+
+        if ($password !== $confirm) {
+            echo json_encode($rh->setResponse(false, 'Las contraseñas no coinciden'));
+            return;
+        }
+
+        try {
+            $reset = Capsule::table('password_resets_clientes')
+                ->where('token', $token)
+                ->where('expires_at', '>=', date('Y-m-d H:i:s'))
+                ->first();
+
+            if (!$reset) {
+                echo json_encode($rh->setResponse(false, 'El enlace ha expirado o ya fue usado. Solicita uno nuevo'));
+                return;
+            }
+
+            $cliente = Cliente::where('email', $reset->email)->where('activo', 1)->first();
+
+            if (!$cliente) {
+                echo json_encode($rh->setResponse(false, 'No se encontró la cuenta'));
+                return;
+            }
+
+            $cliente->password = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+            $cliente->save();
+
+            Capsule::table('password_resets_clientes')->where('token', $token)->delete();
+
+            $rh->setResponse(true, '¡Contraseña actualizada! Ahora puedes iniciar sesión');
+            $rh->href = 'tienda/login';
+        } catch (\Exception $e) {
+            Log::error(TiendaController::class, 'Nueva password: ' . $e->getMessage());
+            echo json_encode($rh->setResponse(false, 'No se pudo actualizar la contraseña'));
+            return;
+        }
+
+        echo json_encode($rh);
+    }
+
+    // ── Email: recuperar contraseña ───────────────────────────
+    private function enviarEmailRecuperar(Cliente $cliente, string $token): void
+    {
+        try {
+            MailHelper::send(
+                $cliente->email,
+                $cliente->nombre . ' ' . $cliente->apellido,
+                'Recupera tu contraseña — ' . Configuracion::get('negocio_nombre', 'Supermercado Web'),
+                'recuperar_password',
+                [
+                    'cliente'   => $cliente,
+                    'reset_url' => _BASE_HTTP_ . 'tienda/nueva-password/' . $token,
+                    'negocio'   => Configuracion::get('negocio_nombre', 'Supermercado Web'),
+                    'base_url'  => _BASE_HTTP_,
+                ]
+            );
+        } catch (\Exception $e) {
+            Log::error(TiendaController::class, 'Email recuperar: ' . $e->getMessage());
+        }
     }
 
     // ── Logout ────────────────────────────────────────────────

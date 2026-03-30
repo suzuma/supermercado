@@ -1,0 +1,87 @@
+{% extends 'partials/tienda_layout.twig' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+
+            {% if tokenInvalid is defined and tokenInvalid %}
+            <div class="sz-tienda-card">
+                <div class="sz-tienda-card-header text-center">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle mr-2"></i> Enlace inválido</h5>
+                </div>
+                <div class="p-4 text-center">
+                    <p class="text-muted mb-4">Este enlace ha expirado o ya fue utilizado. Solicita uno nuevo.</p>
+                    <a href="{{ 'tienda/recuperar'|url }}" class="btn btn-sz btn-block">
+                        <i class="fas fa-redo mr-2"></i> Solicitar nuevo enlace
+                    </a>
+                    <hr>
+                    <a href="{{ 'tienda/login'|url }}" class="text-green">Volver al inicio de sesión</a>
+                </div>
+            </div>
+
+            {% else %}
+            <div class="sz-tienda-card">
+                <div class="sz-tienda-card-header text-center">
+                    <h5 class="mb-0"><i class="fas fa-key mr-2"></i> Recuperar contraseña</h5>
+                </div>
+                <div class="p-4">
+                    <p class="text-muted mb-4">
+                        Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña.
+                    </p>
+                    <form id="formRecuperar">
+                        <div class="form-group">
+                            <label for="emailRecuperar">Correo electrónico</label>
+                            <input type="email" id="emailRecuperar" class="form-control"
+                                   name="email" required placeholder="tu@correo.com" autocomplete="email">
+                        </div>
+                        <div id="recuperarMsg" class="alert d-none"></div>
+                        <button type="submit" class="btn btn-sz btn-block" id="btnRecuperar">
+                            <i class="fas fa-paper-plane mr-2"></i> Enviar enlace
+                        </button>
+                    </form>
+                    <hr>
+                    <p class="text-center text-muted mb-0">
+                        <a href="{{ 'tienda/login'|url }}" class="text-green">
+                            <i class="fas fa-arrow-left mr-1"></i> Volver al inicio de sesión
+                        </a>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$('#formRecuperar').on('submit', function (e) {
+    e.preventDefault();
+    const $msg = $('#recuperarMsg');
+    const $btn = $('#btnRecuperar');
+
+    $msg.addClass('d-none').removeClass('alert-success alert-danger');
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...');
+
+    $.ajax({
+        url: base_url('tienda/recuperar'), method: 'POST',
+        data: $(this).serialize(), dataType: 'json',
+        success: function (res) {
+            if (res.response) {
+                $msg.addClass('alert-success').text(res.message).removeClass('d-none');
+                $('#formRecuperar input').prop('disabled', true);
+                $btn.prop('disabled', true).html('<i class="fas fa-check mr-2"></i> Enviado');
+            } else {
+                $msg.addClass('alert-danger').text(res.message).removeClass('d-none');
+                $btn.prop('disabled', false).html('<i class="fas fa-paper-plane mr-2"></i> Enviar enlace');
+            }
+        },
+        error: function () {
+            $msg.addClass('alert-danger').text('Error de conexión').removeClass('d-none');
+            $btn.prop('disabled', false).html('<i class="fas fa-paper-plane mr-2"></i> Enviar enlace');
+        }
+    });
+});
+</script>
+{% endblock %}
