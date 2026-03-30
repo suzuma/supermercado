@@ -3,6 +3,7 @@ namespace App\Repositories;
 
 use App\Helpers\ResponseHelper;
 use App\Models\{Devolucion, DevolucionDetalle, Venta, VentaDetalle, Producto};
+use App\Services\AuditoriaService;
 use Core\{Auth, Log};
 use Exception;
 use Illuminate\Database\Capsule\Manager as Capsule;
@@ -95,6 +96,11 @@ class DevolucionesRepository
         } catch (Exception $e) {
             Log::error(DevolucionesRepository::class, $e->getMessage());
             $rh->setResponse(false, $e->getMessage() ?: 'No se pudo registrar la devolución');
+        }
+
+        if ($rh->response) {
+            $devId = $rh->result['devolucion_id'] ?? null;
+            AuditoriaService::registrar('devoluciones', 'registrar', "Devolución #$devId de Venta #$ventaId", $devId);
         }
 
         return $rh;

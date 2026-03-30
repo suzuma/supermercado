@@ -8,6 +8,7 @@ namespace App\Repositories;
 
 use App\Helpers\ResponseHelper;
 use App\Models\Producto;
+use App\Services\AuditoriaService;
 use Core\Log;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -133,6 +134,11 @@ class ProductoRepository
             $rh->setResponse(false, 'No se pudo guardar el producto');
         }
 
+        if ($rh->response) {
+            $accion = empty($model->id) ? 'crear' : 'editar';
+            AuditoriaService::registrar('inventario', $accion, "Producto '{$model->nombre}' — {$rh->message}", $this->model->id ?: null);
+        }
+
         return $rh;
     }
 
@@ -150,6 +156,10 @@ class ProductoRepository
         } catch (Exception $e) {
             Log::error(ProductoRepository::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo eliminar el producto');
+        }
+
+        if ($rh->response) {
+            AuditoriaService::registrar('inventario', 'eliminar', "Producto #$id desactivado", $id);
         }
 
         return $rh;

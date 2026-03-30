@@ -3,6 +3,7 @@ namespace App\Repositories;
 
 use App\Helpers\ResponseHelper;
 use App\Models\{Proveedor, OrdenCompra, OrdenCompraDetalle, Producto};
+use App\Services\AuditoriaService;
 use Core\{Auth, Log};
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -98,6 +99,11 @@ class ProveedorRepository
             $rh->setResponse(false, 'No se pudo guardar el proveedor');
         }
 
+        if ($rh->response) {
+            $accion = empty($model->id) ? 'crear' : 'editar';
+            AuditoriaService::registrar('proveedores', $accion, "Proveedor '{$model->nombre}'", $this->model->id ?: null);
+        }
+
         return $rh;
     }
 
@@ -115,6 +121,10 @@ class ProveedorRepository
         } catch (Exception $e) {
             Log::error(ProveedorRepository::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo desactivar el proveedor');
+        }
+
+        if ($rh->response) {
+            AuditoriaService::registrar('proveedores', 'desactivar', "Proveedor #$id desactivado", $id);
         }
 
         return $rh;
@@ -186,6 +196,11 @@ class ProveedorRepository
             $rh->setResponse(false, 'No se pudo crear la orden');
         }
 
+        if ($rh->response) {
+            $ordenId = $rh->result['orden_id'] ?? null;
+            AuditoriaService::registrar('proveedores', 'crear_orden', "Orden de compra #{$ordenId} creada", $ordenId);
+        }
+
         return $rh;
     }
 
@@ -216,6 +231,10 @@ class ProveedorRepository
         } catch (Exception $e) {
             Log::error(ProveedorRepository::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo actualizar el estado');
+        }
+
+        if ($rh->response) {
+            AuditoriaService::registrar('proveedores', 'estado_orden', "Orden #$id → $estado", $id);
         }
 
         return $rh;

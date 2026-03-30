@@ -3,6 +3,7 @@ namespace App\Repositories;
 
 use App\Helpers\ResponseHelper;
 use App\Models\{Empleado, Asistencia, Usuario};
+use App\Services\AuditoriaService;
 use Core\{Auth, Log};
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -148,6 +149,11 @@ class EmpleadoRepository
             $rh->setResponse(false, 'No se pudo guardar el empleado');
         }
 
+        if ($rh->response) {
+            $accion = empty($data['empleado_id']) ? 'crear' : 'editar';
+            AuditoriaService::registrar('empleados', $accion, "Empleado '{$data['nombre']} {$data['apellido']}'");
+        }
+
         return $rh;
     }
 
@@ -172,6 +178,10 @@ class EmpleadoRepository
         } catch (Exception $e) {
             Log::error(EmpleadoRepository::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo desactivar el empleado');
+        }
+
+        if ($rh->response) {
+            AuditoriaService::registrar('empleados', 'desactivar', "Empleado #$id desactivado", $id);
         }
 
         return $rh;

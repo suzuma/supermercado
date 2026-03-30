@@ -1,0 +1,179 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <h1 class="sz-dash-title">Registro de Auditoría</h1>
+    </div>
+
+    {# Filtros #}
+    <div class="sz-filtros animate-in mb-3" style="--delay:.05s">
+        <form method="GET" action="{{ 'auditoria'|url }}" class="sz-filtros-form flex-wrap">
+
+            <div class="sz-filtro-group" style="max-width:160px">
+                <label class="sz-filtro-label">Módulo</label>
+                <select name="modulo" class="form-control form-control-sm">
+                    <option value="">Todos</option>
+                    {% for m in modulos %}
+                        <option value="{{ m }}" {% if filtros.modulo == m %}selected{% endif %}>{{ m|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="sz-filtro-group" style="max-width:200px">
+                <label class="sz-filtro-label">Usuario</label>
+                <select name="usuario_id" class="form-control form-control-sm">
+                    <option value="">Todos</option>
+                    {% for u in usuarios %}
+                        <option value="{{ u.id }}" {% if filtros.usuario_id == u.id ~ '' %}selected{% endif %}>
+                            {{ u.nombre }} {{ u.apellido }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="sz-filtro-group" style="max-width:150px">
+                <label class="sz-filtro-label">Desde</label>
+                <input type="date" name="fecha_desde" value="{{ filtros.fecha_desde }}" class="form-control form-control-sm">
+            </div>
+
+            <div class="sz-filtro-group" style="max-width:150px">
+                <label class="sz-filtro-label">Hasta</label>
+                <input type="date" name="fecha_hasta" value="{{ filtros.fecha_hasta }}" class="form-control form-control-sm">
+            </div>
+
+            <button type="submit" class="btn btn-sz btn-sm">
+                <i class="fas fa-search mr-1"></i> Filtrar
+            </button>
+            <a href="{{ 'auditoria'|url }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+        </form>
+    </div>
+
+    {# Resumen #}
+    <p class="sz-dash-sub mb-3">{{ total }} registro{{ total != 1 ? 's' : '' }} encontrado{{ total != 1 ? 's' : '' }}</p>
+
+    {# Tabla #}
+    <div class="sz-card animate-in" style="--delay:.1s">
+        <div class="sz-card-body p-0">
+            <div class="table-responsive">
+                <table class="sz-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha y hora</th>
+                            <th>Usuario</th>
+                            <th>Módulo</th>
+                            <th>Acción</th>
+                            <th>Descripción</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for reg in registros %}
+                        <tr>
+                            <td class="text-muted" style="font-size:.8rem">{{ reg.id }}</td>
+                            <td style="white-space:nowrap;font-size:.82rem">{{ reg.created_at|date('d/m/Y H:i:s') }}</td>
+                            <td>
+                                {% if reg.usuario %}
+                                    <span class="font-weight-medium">{{ reg.usuario.nombre }} {{ reg.usuario.apellido }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="sz-badge sz-badge--modulo sz-badge--{{ reg.modulo }}">{{ reg.modulo }}</span>
+                            </td>
+                            <td>
+                                <span class="sz-badge sz-badge--accion sz-badge--{{ reg.accion }}">{{ reg.accion }}</span>
+                            </td>
+                            <td style="font-size:.85rem">{{ reg.descripcion }}</td>
+                            <td class="text-muted" style="font-size:.78rem">{{ reg.ip }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
+                                No hay registros para los filtros seleccionados
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# Paginación #}
+    {% if total_pages > 1 %}
+    <nav class="mt-3 d-flex justify-content-center" aria-label="Paginación de auditoría">
+        <ul class="pagination pagination-sm">
+            {% if pagina > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ 'auditoria'|url }}?modulo={{ filtros.modulo }}&usuario_id={{ filtros.usuario_id }}&fecha_desde={{ filtros.fecha_desde }}&fecha_hasta={{ filtros.fecha_hasta }}&page={{ pagina - 1 }}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for p in 1..total_pages %}
+                {% if p == pagina %}
+                <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                {% elseif p == 1 or p == total_pages or (p >= pagina - 2 and p <= pagina + 2) %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ 'auditoria'|url }}?modulo={{ filtros.modulo }}&usuario_id={{ filtros.usuario_id }}&fecha_desde={{ filtros.fecha_desde }}&fecha_hasta={{ filtros.fecha_hasta }}&page={{ p }}">{{ p }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagina < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ 'auditoria'|url }}?modulo={{ filtros.modulo }}&usuario_id={{ filtros.usuario_id }}&fecha_desde={{ filtros.fecha_desde }}&fecha_hasta={{ filtros.fecha_hasta }}&page={{ pagina + 1 }}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.sz-filtro-label {
+    font-size: .72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--sz-muted);
+    margin-bottom: 4px;
+    display: block;
+}
+.sz-badge--modulo,
+.sz-badge--accion {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.sz-badge--ventas      { background:#e8f5e9; color:#2e7d32; }
+.sz-badge--inventario  { background:#e3f2fd; color:#1565c0; }
+.sz-badge--devoluciones{ background:#fff3e0; color:#e65100; }
+.sz-badge--clientes    { background:#f3e5f5; color:#6a1b9a; }
+.sz-badge--proveedores { background:#e0f7fa; color:#006064; }
+.sz-badge--empleados   { background:#fce4ec; color:#880e4f; }
+
+.sz-badge--registrar,
+.sz-badge--crear       { background:#e8f5e9; color:#2e7d32; }
+.sz-badge--editar      { background:#e3f2fd; color:#1565c0; }
+.sz-badge--cancelar,
+.sz-badge--desactivar,
+.sz-badge--eliminar    { background:#ffebee; color:#c62828; }
+.sz-badge--crear_orden,
+.sz-badge--estado_orden{ background:#fff8e1; color:#f57f17; }
+</style>
+{% endblock %}

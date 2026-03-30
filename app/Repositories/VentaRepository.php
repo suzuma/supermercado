@@ -3,6 +3,7 @@ namespace App\Repositories;
 
 use App\Helpers\ResponseHelper;
 use App\Models\{Venta, VentaDetalle, Producto};
+use App\Services\AuditoriaService;
 use Core\{Auth, Log};
 use Exception;
 use Illuminate\Database\Capsule\Manager as Capsule;
@@ -108,6 +109,11 @@ class VentaRepository
             $rh->setResponse(false, 'No se pudo registrar la venta');
         }
 
+        if ($rh->response) {
+            $ventaId = $rh->result['venta_id'] ?? null;
+            AuditoriaService::registrar('ventas', 'registrar', "Venta #{$ventaId} — Total: \${$total}", $ventaId);
+        }
+
         return $rh;
     }
 
@@ -138,6 +144,10 @@ class VentaRepository
         } catch (Exception $e) {
             Log::error(VentaRepository::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo cancelar la venta');
+        }
+
+        if ($rh->response) {
+            AuditoriaService::registrar('ventas', 'cancelar', "Venta #$id cancelada", $id);
         }
 
         return $rh;

@@ -63,6 +63,8 @@ $router->group(['before' => 'auth'], function($router){
     $router->post('/proveedores/guardarOrden',         ['App\\Controllers\\ProveedoresController', 'postGuardarOrden']);
     $router->post('/proveedores/estadoOrden',          ['App\\Controllers\\ProveedoresController', 'postEstadoOrden']);
 
+    $router->get('/auditoria',  ['App\\Controllers\\AuditoriaController', 'getIndex']);
+
     $router->get('/configuracion',                          ['App\\Controllers\\ConfiguracionController', 'getIndex']);
     $router->post('/configuracion/negocio',                 ['App\\Controllers\\ConfiguracionController', 'postNegocio']);
     $router->post('/configuracion/password',                ['App\\Controllers\\ConfiguracionController', 'postPassword']);
@@ -96,13 +98,18 @@ $router->get('/tienda/checkout',           ['App\\Controllers\\TiendaController'
 $router->get('/tienda/confirmacion/{id}',  ['App\\Controllers\\TiendaController', 'getConfirmacion']);
 $router->get('/tienda/seguimiento',        ['App\\Controllers\\TiendaController', 'getSeguimiento']);
 $router->get('/tienda/login',              ['App\\Controllers\\TiendaController', 'getLogin']);
-$router->get('/tienda/logout',             ['App\\Controllers\\TiendaController', 'getLogout']);
-$router->get('/tienda/registro',           ['App\\Controllers\\TiendaController', 'getRegistro']);
+$router->get('/tienda/logout',              ['App\\Controllers\\TiendaController', 'getLogout']);
+$router->get('/tienda/registro',            ['App\\Controllers\\TiendaController', 'getRegistro']);
+$router->get('/tienda/recuperar',           ['App\\Controllers\\TiendaController', 'getRecuperar']);
+$router->get('/tienda/nueva-password/{token}', ['App\\Controllers\\TiendaController', 'getNuevaPassword']);
 
 $router->group(['before' => 'csrf'], function($router) {
-    $router->post('/tienda/pedido',    ['App\\Controllers\\TiendaController', 'postPedido']);
-    $router->post('/tienda/login',     ['App\\Controllers\\TiendaController', 'postLogin']);
-    $router->post('/tienda/registro',  ['App\\Controllers\\TiendaController', 'postRegistro']);
+    $router->post('/tienda/pedido',           ['App\\Controllers\\TiendaController', 'postPedido']);
+    $router->post('/tienda/login',            ['App\\Controllers\\TiendaController', 'postLogin']);
+    $router->post('/tienda/registro',         ['App\\Controllers\\TiendaController', 'postRegistro']);
+    $router->post('/tienda/recuperar',        ['App\\Controllers\\TiendaController', 'postRecuperar']);
+    $router->post('/tienda/nueva-password',   ['App\\Controllers\\TiendaController', 'postNuevaPassword']);
+    $router->post('/tienda/cancelar-pedido',  ['App\\Controllers\\TiendaController', 'postCancelarPedido']);
 });
 
 

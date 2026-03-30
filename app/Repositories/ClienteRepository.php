@@ -3,6 +3,7 @@ namespace App\Repositories;
 
 use App\Helpers\ResponseHelper;
 use App\Models\Cliente;
+use App\Services\AuditoriaService;
 use Core\Log;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -118,6 +119,11 @@ class ClienteRepository
             $rh->setResponse(false, 'No se pudo guardar el cliente');
         }
 
+        if ($rh->response) {
+            $accion = $esNuevo ? 'crear' : 'editar';
+            AuditoriaService::registrar('clientes', $accion, "Cliente '{$model->nombre} {$model->apellido}'", $cliente->id ?? null);
+        }
+
         return $rh;
     }
 
@@ -135,6 +141,10 @@ class ClienteRepository
         } catch (Exception $e) {
             Log::error(ClienteRepository::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo desactivar el cliente');
+        }
+
+        if ($rh->response) {
+            AuditoriaService::registrar('clientes', 'desactivar', "Cliente #$id desactivado", $id);
         }
 
         return $rh;
