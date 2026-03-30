@@ -8,7 +8,36 @@ PHP 8 MVC web application for supermarket management. Combines an internal POS s
 **Timezone:** America/Hermosillo (UTC-7, no DST)
 **Currency:** MXN (configurable to USD via `configuracion` table)
 
+## 1. Reglas de Oro (Core Rules)
+1. **Consulta de Skills**: Antes de actuar, verifica la carpeta `.claude/skills/`.
+2. **Idioma**: Interacciones, comentarios y commits estrictamente en **Español**.
+3. **Flujo de Trabajo (Pipeline)**:
+    - **Planificar**: Crear `task_plan.md` (Skill: planning-with-files).
+    - **Auditar**: Ejecutar A11Y, Web Vitals y Contraste de Color.
+    - **Testear**: Aplicar reglas de PHPUnit antes de confirmar.
+    - **Persistir**: Git con Conventional Commits (Skill: git-manager).
+
+## 2. Estándares de Programación (PHP 8.1+)
+
+### Calidad y Tipado (Type Safety)
+- **Strict Types**: Todos los archivos inician con `declare(strict_types=1);`.
+- **Tipado Fuerte**: Obligatorio en argumentos, propiedades de clase y retornos.
+- **Naming**: PSR-12 (PascalCase para clases, camelCase para métodos/variables).
+- **Constructores**: Usar propiedades promovidas de PHP 8 siempre que sea posible.
+
+### Política de Comentarios (Clean Code)
+- **Auto-documentación**: Nombres de variables descriptivos que eliminen la necesidad de comentarios.
+- **Prohibiciones**: No repetir lo que hace el código. Prohibido dejar código comentado (borrarlo, está en Git).
+- **El "Por qué"**: Los comentarios solo explican decisiones de negocio o limitaciones técnicas.
 ---
+
+## Skills Activos (Toolbelt)
+- `git-workflow-manager`: Historial profesional y auditoría de seguridad.
+- `aria-web-helper`: Semántica y roles para lectores de pantalla.
+- `keyboard-nav-master`: Operabilidad total del POS sin mouse.
+- `color-contrast-checker`: Legibilidad bajo estándares WCAG 2.1.
+- `lazy-loading-master`: Estrategias de carga diferida en Twig/jQuery.
+- `web-vitals-monitor`: Monitoreo de estabilidad visual y velocidad.
 
 ## Running the project
 

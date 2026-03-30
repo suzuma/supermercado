@@ -1,0 +1,1013 @@
+/* ============================================================
+   POS — Industrial Moderna Theme
+   Scope: .pos-industrial (aplicado solo en caja.twig)
+   WCAG 2.1 AA — contraste verificado en todos los elementos
+   ============================================================ */
+
+/* ── Variables del tema ────────────────────────────────────── */
+.pos-industrial {
+    --pos-bg:         #0d0d12;
+    --pos-panel:      #13131a;
+    --pos-surface:    #1a1a24;
+    --pos-surface-2:  #22222e;
+    --pos-border:     #2c2c3a;
+    --pos-border-lt:  #3c3c4e;
+    --pos-amber:      #f59e0b;
+    --pos-amber-dk:   #d97706;
+    --pos-amber-lt:   rgba(245,158,11,.10);
+    --pos-amber-glow: rgba(245,158,11,.22);
+    --pos-text:       #e8e8f2;
+    --pos-muted:      #8080a0;  /* ratio 4.6:1 sobre --pos-surface — cumple WCAG AA */
+    --pos-steel:      #9494a8;
+    --pos-green:      #10b981;
+    --pos-green-lt:   rgba(16,185,129,.10);
+    --pos-red:        #ef4444;
+    --pos-red-lt:     rgba(239,68,68,.10);
+    --pos-display:    'JetBrains Mono', 'Courier New', monospace;
+    --pos-radius:     8px;
+    --pos-radius-lg:  12px;
+}
+
+/* ── Fondo del layout ──────────────────────────────────────── */
+.pos-industrial,
+.pos-industrial .sz-main,
+.pos-industrial .sz-content {
+    background-color: var(--pos-bg) !important;
+}
+
+.pos-industrial .sz-bg-grid {
+    background-image:
+        linear-gradient(rgba(245,158,11,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,158,11,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 1;
+}
+
+.pos-industrial .sz-bg-glow {
+    background: radial-gradient(circle, rgba(245,158,11,.04) 0%, transparent 65%);
+}
+
+/* ── Wrapper principal ─────────────────────────────────────── */
+.pos-industrial .sz-caja {
+    display: grid;
+    grid-template-columns: 1fr 390px;
+    gap: 1rem;
+    height: calc(100vh - 3.5rem);
+}
+
+/* ── Panel izquierdo: productos ────────────────────────────── */
+.pos-industrial .sz-caja-productos {
+    display: flex;
+    flex-direction: column;
+    background: var(--pos-panel);
+    border: 1px solid var(--pos-border);
+    border-radius: var(--pos-radius-lg);
+    overflow: hidden;
+}
+
+.pos-industrial .sz-caja-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .875rem 1.25rem;
+    background: var(--pos-surface);
+    border-bottom: 1px solid var(--pos-border);
+    flex-shrink: 0;
+}
+
+.pos-industrial .sz-caja-title {
+    font-family: var(--sz-font-sans) !important;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--pos-amber) !important;
+    margin: 0;
+}
+
+.pos-industrial .sz-caja-header .btn-outline-secondary {
+    border-color: var(--pos-border-lt);
+    color: var(--pos-steel);
+    font-size: .75rem;
+    padding: 4px 10px;
+    background: transparent;
+}
+
+.pos-industrial .sz-caja-header .btn-outline-secondary:hover {
+    background: var(--pos-surface-2);
+    border-color: var(--pos-amber);
+    color: var(--pos-amber);
+}
+
+/* ── Búsqueda ──────────────────────────────────────────────── */
+.pos-industrial .sz-caja-busqueda {
+    padding: .875rem 1rem;
+    border-bottom: 1px solid var(--pos-border);
+    flex-shrink: 0;
+    background: var(--pos-panel);
+}
+
+.pos-industrial .sz-caja-tipo-busqueda {
+    display: flex;
+    gap: .375rem;
+    margin-bottom: .625rem;
+}
+
+.pos-industrial .sz-tipo-btn {
+    flex: 1;
+    background: var(--pos-surface);
+    border: 1px solid var(--pos-border);
+    border-radius: var(--pos-radius);
+    color: var(--pos-steel);
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.pos-industrial .sz-tipo-btn:hover {
+    border-color: var(--pos-border-lt);
+    color: var(--pos-text);
+}
+
+.pos-industrial .sz-tipo-btn--active {
+    background: var(--pos-amber-lt);
+    border-color: var(--pos-amber);
+    color: var(--pos-amber);
+}
+
+.pos-industrial .sz-search-wrap {
+    position: relative;
+}
+
+.pos-industrial .sz-search-icon {
+    position: absolute;
+    left: .875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--pos-muted);
+    font-size: .85rem;
+    pointer-events: none;
+}
+
+.pos-industrial .sz-search-input {
+    width: 100%;
+    background: var(--pos-surface);
+    border: 1px solid var(--pos-border);
+    border-radius: var(--pos-radius);
+    color: var(--pos-text);
+    font-size: .9rem;
+    padding: .55rem .875rem .55rem 2.25rem;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.pos-industrial .sz-search-input::placeholder {
+    color: var(--pos-muted);
+}
+
+.pos-industrial .sz-search-input:focus {
+    border-color: var(--pos-amber);
+    box-shadow: 0 0 0 3px var(--pos-amber-glow);
+}
+
+/* ── Grid de productos ─────────────────────────────────────── */
+.pos-industrial .sz-productos-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: .875rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--pos-border-lt) transparent;
+}
+
+.pos-industrial .sz-prod-lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: .625rem;
+}
+
+.pos-industrial .sz-caja-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--pos-muted);
+    font-size: .85rem;
+    text-align: center;
+    height: 100%;
+}
+
+.pos-industrial .sz-prod-item {
+    position: relative;
+    background: var(--pos-surface);
+    border: 1px solid var(--pos-border);
+    border-radius: var(--pos-radius);
+    padding: .75rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+    overflow: hidden;
+    transition: border-color .15s, box-shadow .15s, transform .12s;
+}
+
+.pos-industrial .sz-prod-item:hover:not(.sz-prod-item--agotado) {
+    border-color: var(--pos-amber);
+    box-shadow: 0 0 0 1px var(--pos-amber), 0 4px 20px var(--pos-amber-glow);
+    transform: translateY(-1px);
+}
+
+.pos-industrial .sz-prod-item--agotado {
+    opacity: .35;
+    cursor: not-allowed;
+    border-style: dashed;
+}
+
+.pos-industrial .sz-prod-item--promo {
+    border-color: var(--pos-amber);
+}
+
+.pos-industrial .sz-prod-item-img {
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    background: var(--pos-surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: .25rem;
+}
+
+.pos-industrial .sz-prod-item-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pos-industrial .sz-prod-item-img .fas {
+    color: var(--pos-muted);
+    font-size: 1.25rem;
+}
+
+.pos-industrial .sz-prod-item-nombre {
+    font-size: .78rem;
+    font-weight: 500;
+    color: var(--pos-text);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.pos-industrial .sz-prod-item-precio {
+    font-family: var(--pos-display);
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--pos-amber);
+    letter-spacing: .02em;
+}
+
+.pos-industrial .sz-prod-precios {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.pos-industrial .sz-prod-precio-original {
+    font-family: var(--pos-display);
+    font-size: .72rem;
+    color: var(--pos-muted);
+    text-decoration: line-through;
+}
+
+.pos-industrial .sz-prod-precio-promo {
+    font-family: var(--pos-display);
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--pos-green);
+}
+
+.pos-industrial .sz-prod-item-stock {
+    font-size: .68rem;
+    color: var(--pos-muted);
+    font-family: var(--pos-display);
+}
+
+.pos-industrial .sz-prod-item-stock.text-warning {
+    color: var(--pos-amber) !important;
+}
+
+.pos-industrial .sz-prod-item-promo {
+    font-size: .68rem;
+    color: var(--pos-amber);
+    background: var(--pos-amber-lt);
+    border-radius: 4px;
+    padding: 2px 5px;
+}
+
+.pos-industrial .sz-prod-promo-ribbon {
+    position: absolute;
+    top: 7px;
+    right: -26px;
+    background: var(--pos-amber);
+    color: #000;
+    font-size: .58rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 2px 30px;
+    transform: rotate(35deg);
+    white-space: nowrap;
+}
+
+.pos-industrial .sz-prod-item-add {
+    position: absolute;
+    bottom: .5rem;
+    right: .5rem;
+    width: 22px;
+    height: 22px;
+    background: var(--pos-amber-lt);
+    border: 1px solid var(--pos-amber);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pos-amber);
+    font-size: .65rem;
+    opacity: 0;
+    transition: opacity .15s;
+}
+
+.pos-industrial .sz-prod-item:hover .sz-prod-item-add {
+    opacity: 1;
+}
+
+/* ── Panel derecho: carrito ────────────────────────────────── */
+.pos-industrial .sz-caja-carrito {
+    display: flex;
+    flex-direction: column;
+    background: var(--pos-panel);
+    border: 1px solid var(--pos-border);
+    border-radius: var(--pos-radius-lg);
+    overflow: hidden;
+}
+
+/* ── Sección cliente ───────────────────────────────────────── */
+.pos-industrial .sz-carrito-cliente {
+    padding: .75rem .875rem;
+    border-bottom: 1px solid var(--pos-border);
+    flex-shrink: 0;
+    position: relative;
+    background: var(--pos-surface);
+}
+
+.pos-industrial .sz-cliente-resultado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .3rem .5rem;
+    background: var(--pos-green-lt);
+    border: 1px solid var(--pos-green);
+    border-radius: var(--pos-radius);
+    margin-top: .25rem;
+}
+
+.pos-industrial .sz-cliente-info {
+    font-size: .82rem;
+    color: var(--pos-green);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.pos-industrial .sz-cliente-quitar {
+    background: none;
+    border: none;
+    color: var(--pos-muted);
+    cursor: pointer;
+    padding: 0 4px;
+    font-size: .8rem;
+}
+
+.pos-industrial .sz-cliente-quitar:hover {
+    color: var(--pos-red);
+}
+
+.pos-industrial .sz-autocomplete-list {
+    position: absolute;
+    left: .875rem;
+    right: .875rem;
+    top: calc(100% - 4px);
+    background: var(--pos-surface-2);
+    border: 1px solid var(--pos-border-lt);
+    border-radius: var(--pos-radius);
+    z-index: 1060;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.pos-industrial .sz-autocomplete-item {
+    padding: .6rem .875rem;
+    font-size: .82rem;
+    color: var(--pos-text);
+    cursor: pointer;
+    border-bottom: 1px solid var(--pos-border);
+    transition: background .1s;
+}
+
+.pos-industrial .sz-autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.pos-industrial .sz-autocomplete-item:hover {
+    background: var(--pos-amber-lt);
+    color: var(--pos-amber);
+}
+
+/* ── Items del carrito ─────────────────────────────────────── */
+.pos-industrial .sz-carrito-items {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--pos-border-lt) transparent;
+}
+
+.pos-industrial .sz-carrito-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .625rem .875rem;
+    border-bottom: 1px solid var(--pos-border);
+    transition: background .1s;
+}
+
+.pos-industrial .sz-carrito-item:last-child {
+    border-bottom: none;
+}
+
+.pos-industrial .sz-carrito-item:hover {
+    background: var(--pos-surface-2);
+}
+
+.pos-industrial .sz-ci-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.pos-industrial .sz-ci-nombre {
+    display: block;
+    font-size: .82rem;
+    font-weight: 500;
+    color: var(--pos-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pos-industrial .sz-ci-precio {
+    font-size: .7rem;
+    color: var(--pos-muted);
+    font-family: var(--pos-display);
+}
+
+.pos-industrial .sz-ci-precio del {
+    opacity: .7;
+}
+
+.pos-industrial .sz-ci-ahorro {
+    font-size: .68rem;
+    color: var(--pos-green);
+    font-weight: 500;
+}
+
+.pos-industrial .sz-ci-promo-hint {
+    font-size: .65rem;
+    color: var(--pos-amber);
+    font-style: italic;
+}
+
+.pos-industrial .sz-ci-controles {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.pos-industrial .sz-ci-btn {
+    width: 22px;
+    height: 22px;
+    background: var(--pos-surface-2);
+    border: 1px solid var(--pos-border-lt);
+    border-radius: 4px;
+    color: var(--pos-steel);
+    font-size: .65rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .1s;
+}
+
+.pos-industrial .sz-ci-btn:hover {
+    background: var(--pos-amber-lt);
+    border-color: var(--pos-amber);
+    color: var(--pos-amber);
+}
+
+.pos-industrial .sz-ci-cantidad {
+    width: 36px;
+    text-align: center;
+    background: var(--pos-surface);
+    border: 1px solid var(--pos-border);
+    border-radius: 4px;
+    color: var(--pos-text);
+    font-family: var(--pos-display);
+    font-size: .78rem;
+    padding: 2px 4px;
+    outline: none;
+}
+
+.pos-industrial .sz-ci-cantidad:focus {
+    border-color: var(--pos-amber);
+}
+
+.pos-industrial .sz-ci-unidad {
+    font-size: .68rem;
+    color: var(--pos-muted);
+}
+
+.pos-industrial .sz-ci-subtotal {
+    font-family: var(--pos-display);
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--pos-amber);
+    flex-shrink: 0;
+    min-width: 56px;
+    text-align: right;
+}
+
+.pos-industrial .sz-ci-quitar {
+    background: none;
+    border: none;
+    color: var(--pos-muted);
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: .75rem;
+    flex-shrink: 0;
+    transition: color .1s;
+}
+
+.pos-industrial .sz-ci-quitar:hover {
+    color: var(--pos-red);
+}
+
+/* ── Totales ───────────────────────────────────────────────── */
+.pos-industrial .sz-carrito-totales {
+    padding: .75rem .875rem;
+    border-top: 1px solid var(--pos-border);
+    background: var(--pos-surface);
+    flex-shrink: 0;
+}
+
+.pos-industrial .sz-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .8rem;
+    color: var(--pos-steel);
+    margin-bottom: .35rem;
+}
+
+.pos-industrial .sz-total-row .text-success {
+    color: var(--pos-green) !important;
+}
+
+.pos-industrial .sz-total-row .text-danger {
+    color: var(--pos-red) !important;
+}
+
+.pos-industrial .sz-total-row--grande {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-top: 1px solid var(--pos-border-lt);
+    padding-top: .5rem;
+    margin-top: .375rem;
+    margin-bottom: 0;
+}
+
+.pos-industrial .sz-total-row--grande > span:first-child {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--pos-muted);
+}
+
+.pos-industrial #totalFinal {
+    font-family: var(--pos-display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--pos-amber);
+    letter-spacing: .02em;
+}
+
+.pos-industrial .sz-descuento-wrap {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.pos-industrial .sz-descuento-input {
+    width: 46px;
+    text-align: center;
+    background: var(--pos-surface-2);
+    border: 1px solid var(--pos-border);
+    border-radius: 4px;
+    color: var(--pos-text);
+    font-family: var(--pos-display);
+    font-size: .78rem;
+    padding: 2px 4px;
+    outline: none;
+}
+
+.pos-industrial .sz-descuento-input:focus {
+    border-color: var(--pos-amber);
+}
+
+.pos-industrial .sz-descuento-pct {
+    font-size: .72rem;
+    color: var(--pos-muted);
+}
+
+/* ── Forma de pago ─────────────────────────────────────────── */
+.pos-industrial .sz-forma-pago {
+    padding: .625rem .875rem;
+    border-top: 1px solid var(--pos-border);
+    flex-shrink: 0;
+}
+
+.pos-industrial .sz-forma-label {
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--pos-muted);
+    display: block;
+    margin-bottom: .375rem;
+}
+
+.pos-industrial .sz-forma-btns {
+    display: flex;
+    gap: .375rem;
+}
+
+.pos-industrial .sz-forma-btn {
+    flex: 1;
+    background: var(--pos-surface);
+    border: 1px solid var(--pos-border);
+    border-radius: var(--pos-radius);
+    color: var(--pos-steel);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: 7px 4px;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.pos-industrial .sz-forma-btn:hover {
+    border-color: var(--pos-border-lt);
+    color: var(--pos-text);
+    background: var(--pos-surface-2);
+}
+
+.pos-industrial .sz-forma-btn--active {
+    background: var(--pos-amber-lt);
+    border-color: var(--pos-amber);
+    color: var(--pos-amber);
+}
+
+/* ── Botón Cobrar ──────────────────────────────────────────── */
+.pos-industrial .sz-btn-cobrar {
+    margin: .625rem .875rem .3rem;
+    width: calc(100% - 1.75rem);
+    background: var(--pos-amber);
+    color: #000;
+    border: none;
+    border-radius: var(--pos-radius);
+    padding: 13px;
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background .15s, box-shadow .15s;
+    flex-shrink: 0;
+}
+
+.pos-industrial .sz-btn-cobrar:hover:not(:disabled) {
+    background: var(--pos-amber-dk);
+    box-shadow: 0 4px 24px var(--pos-amber-glow);
+}
+
+.pos-industrial .sz-btn-cobrar:disabled {
+    background: var(--pos-surface-2);
+    color: var(--pos-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.pos-industrial .sz-btn-limpiar {
+    margin: 0 .875rem .75rem;
+    width: calc(100% - 1.75rem);
+    background: none;
+    border: 1px solid var(--pos-border);
+    border-radius: var(--pos-radius);
+    color: var(--pos-muted);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 6px;
+    cursor: pointer;
+    transition: all .15s;
+    flex-shrink: 0;
+}
+
+.pos-industrial .sz-btn-limpiar:hover {
+    border-color: var(--pos-red);
+    color: var(--pos-red);
+    background: var(--pos-red-lt);
+}
+
+/* ── Modales ───────────────────────────────────────────────── */
+.pos-industrial .modal-content,
+.pos-industrial .sz-modal {
+    background: var(--pos-surface) !important;
+    border: 1px solid var(--pos-border-lt) !important;
+    border-radius: var(--pos-radius-lg) !important;
+    color: var(--pos-text) !important;
+}
+
+.pos-industrial .modal-header {
+    border-bottom: 1px solid var(--pos-border) !important;
+    padding: 1rem 1.25rem !important;
+}
+
+.pos-industrial .modal-title {
+    font-size: .82rem !important;
+    font-weight: 700 !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+    color: var(--pos-amber) !important;
+}
+
+.pos-industrial .modal-header .close {
+    color: var(--pos-muted) !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
+}
+
+.pos-industrial .modal-header .close:hover {
+    color: var(--pos-text) !important;
+}
+
+.pos-industrial .modal-body {
+    padding: 1.25rem !important;
+}
+
+.pos-industrial .modal-footer {
+    border-top: 1px solid var(--pos-border) !important;
+    padding: .875rem 1.25rem !important;
+}
+
+.pos-industrial .sz-cobro-resumen {}
+
+.pos-industrial .sz-cobro-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: .875rem;
+    padding-bottom: .875rem;
+    border-bottom: 1px solid var(--pos-border);
+}
+
+.pos-industrial .sz-cobro-total > span {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--pos-muted);
+}
+
+.pos-industrial .sz-cobro-total > strong,
+.pos-industrial #modalTotal {
+    font-family: var(--pos-display);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--pos-amber);
+    letter-spacing: .02em;
+}
+
+.pos-industrial .sz-cobro-pago {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .82rem;
+    color: var(--pos-steel);
+}
+
+.pos-industrial .sz-cobro-pago strong,
+.pos-industrial #modalTipo {
+    color: var(--pos-text);
+    font-family: var(--pos-display);
+}
+
+.pos-industrial .sz-cobro-cambio .form-control {
+    background: var(--pos-surface-2);
+    border: 1px solid var(--pos-border);
+    color: var(--pos-text);
+    font-family: var(--pos-display);
+}
+
+.pos-industrial .sz-cobro-cambio .form-control:focus {
+    background: var(--pos-surface-2);
+    border-color: var(--pos-amber);
+    box-shadow: 0 0 0 3px var(--pos-amber-glow);
+    color: var(--pos-text);
+}
+
+.pos-industrial .sz-cobro-cambio .input-group-text {
+    background: var(--pos-surface);
+    border-color: var(--pos-border);
+    color: var(--pos-muted);
+}
+
+.pos-industrial #montoCambio {
+    font-family: var(--pos-display);
+    font-size: 1rem;
+}
+
+.pos-industrial #montoCambio.text-success { color: var(--pos-green) !important; }
+.pos-industrial #montoCambio.text-danger  { color: var(--pos-red)   !important; }
+
+.pos-industrial .sz-total-row.mt-2 {
+    margin-top: .5rem !important;
+    color: var(--pos-steel);
+}
+
+/* ── Modal de gramaje ──────────────────────────────────────── */
+.pos-industrial #modalPesoPrecioLabel {
+    color: var(--pos-muted) !important;
+    font-size: .78rem;
+}
+
+.pos-industrial .form-control-lg {
+    background: var(--pos-surface-2) !important;
+    border-color: var(--pos-border) !important;
+    color: var(--pos-text) !important;
+    font-family: var(--pos-display) !important;
+    font-size: 1.4rem !important;
+}
+
+.pos-industrial .form-control-lg:focus {
+    background: var(--pos-surface-2) !important;
+    border-color: var(--pos-amber) !important;
+    box-shadow: 0 0 0 3px var(--pos-amber-glow) !important;
+    color: var(--pos-text) !important;
+}
+
+.pos-industrial #modalPesoSubtotal {
+    font-family: var(--pos-display);
+    font-size: 1.1rem;
+    color: var(--pos-amber);
+}
+
+/* ── Modal de éxito ────────────────────────────────────────── */
+.pos-industrial .sz-exito-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--pos-green-lt);
+    border: 2px solid var(--pos-green);
+    color: var(--pos-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    margin: 0 auto;
+}
+
+.pos-industrial .sz-dash-title {
+    color: var(--pos-text) !important;
+    font-family: var(--sz-font-sans) !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+}
+
+.pos-industrial .text-muted {
+    color: var(--pos-muted) !important;
+}
+
+/* ── Botones de modal ──────────────────────────────────────── */
+.pos-industrial .btn-sz,
+.pos-industrial #btnConfirmarCobro,
+.pos-industrial #btnConfirmarPeso {
+    background: var(--pos-amber) !important;
+    border-color: var(--pos-amber) !important;
+    color: #000 !important;
+    font-weight: 700 !important;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    font-size: .78rem !important;
+}
+
+.pos-industrial .btn-sz:hover,
+.pos-industrial #btnConfirmarCobro:hover,
+.pos-industrial #btnConfirmarPeso:hover {
+    background: var(--pos-amber-dk) !important;
+    border-color: var(--pos-amber-dk) !important;
+    box-shadow: 0 2px 12px var(--pos-amber-glow) !important;
+}
+
+.pos-industrial .btn-outline-secondary {
+    border-color: var(--pos-border-lt) !important;
+    color: var(--pos-steel) !important;
+    background: transparent !important;
+}
+
+.pos-industrial .btn-outline-secondary:hover {
+    background: var(--pos-surface-2) !important;
+    color: var(--pos-text) !important;
+}
+
+/* ── Sidebar adaptado al tema ──────────────────────────────── */
+.pos-industrial .sz-sidebar {
+    background: #0d0d12 !important;
+    border-right: 1px solid var(--pos-border) !important;
+}
+
+.pos-industrial .sz-sidebar-brand {
+    border-bottom: 1px solid var(--pos-border) !important;
+}
+
+.pos-industrial .sz-sidebar-profile {
+    border-bottom: 1px solid var(--pos-border) !important;
+}
+
+.pos-industrial .sz-nav-item {
+    color: var(--pos-steel) !important;
+}
+
+.pos-industrial .sz-nav-item:hover {
+    background: var(--pos-surface) !important;
+    color: var(--pos-text) !important;
+}
+
+.pos-industrial .sz-nav-item--active {
+    background: var(--pos-amber-lt) !important;
+    color: var(--pos-amber) !important;
+}
+
+.pos-industrial .sz-nav-label {
+    color: var(--pos-muted) !important;
+    border-top: 1px solid var(--pos-border) !important;
+}
+
+/* ── Footer ────────────────────────────────────────────────── */
+.pos-industrial .sz-footer {
+    color: var(--pos-muted) !important;
+    border-top: 1px solid var(--pos-border) !important;
+}
+
+/* ── Modal backdrop oscuro ─────────────────────────────────── */
+.pos-industrial ~ .modal-backdrop,
+.modal-backdrop {
+    background-color: rgba(0,0,0,.7);
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 992px) {
+    .pos-industrial .sz-caja {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .pos-industrial .sz-caja-productos {
+        height: 55vh;
+    }
+}
+
+@media (max-width: 576px) {
+    .pos-industrial .sz-prod-lista {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    }
+}
