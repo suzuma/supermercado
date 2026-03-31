@@ -13,14 +13,42 @@
                 </div>
                 <div class="p-4">
                     <div class="form-group">
-                        <label>Dirección completa *</label>
-                        <textarea class="form-control" id="checkoutDireccion" rows="3"
-                                  placeholder="Calle, número, colonia, ciudad...">{{ cliente.direccion ?? '' }}</textarea>
+                        <label>Calle y número *</label>
+                        <input type="text" class="form-control" id="checkoutCalle"
+                               placeholder="Ej. Av. Reforma 123" autocomplete="street-address">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label>Código postal *</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="checkoutCP"
+                                       placeholder="00000" maxlength="5" inputmode="numeric" autocomplete="postal-code">
+                                <div class="input-group-append" id="cpSpinner" style="display:none">
+                                    <span class="input-group-text"><i class="fas fa-spinner fa-spin"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group col-md-8">
+                            <label>Colonia *</label>
+                            <select class="form-control" id="checkoutColonia" disabled>
+                                <option value="">— Ingresa tu CP primero —</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row" id="rowCiudad" style="display:none;">
+                        <div class="form-group col-md-6">
+                            <label>Ciudad</label>
+                            <input type="text" class="form-control" id="checkoutCiudad" readonly>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Estado</label>
+                            <input type="text" class="form-control" id="checkoutEstado" readonly>
+                        </div>
                     </div>
                     <div class="form-group mb-0">
                         <label>Teléfono de contacto</label>
                         <input type="text" class="form-control" id="checkoutTelefono"
-                               value="{{ cliente.telefono ?? '' }}" placeholder="000-000-0000">
+                               value="{{ cliente.telefono ?? '' }}" placeholder="000-000-0000" inputmode="tel">
                     </div>
                 </div>
             </div>
@@ -223,10 +251,51 @@ $(document).ready(function () {
         actualizarTotales();
     });
 
+    // ── CP / Colonia ───────────────────────────────────────────
+    let cpTimer = null;
+    $('#checkoutCP').on('input', function () {
+        const cp = this.value.replace(/\D/g, '').slice(0, 5);
+        this.value = cp;
+        clearTimeout(cpTimer);
+        if (cp.length < 5) {
+            $('#checkoutColonia').html('<option value="">— Ingresa tu CP primero —</option>').prop('disabled', true);
+            $('#rowCiudad').hide();
+            return;
+        }
+        cpTimer = setTimeout(function () {
+            $('#cpSpinner').show();
+            $.getJSON(base_url('tienda/colonias?cp=' + cp), function (res) {
+                if (res.colonias && res.colonias.length) {
+                    let opts = '<option value="">Selecciona tu colonia</option>';
+                    res.colonias.forEach(function (c) { opts += '<option value="' + c + '">' + c + '</option>'; });
+                    $('#checkoutColonia').html(opts).prop('disabled', false);
+                    $('#checkoutCiudad').val(res.ciudad || '');
+                    $('#checkoutEstado').val(res.estado || '');
+                    $('#rowCiudad').show();
+                } else {
+                    $('#checkoutColonia').html('<option value="">CP no encontrado</option>').prop('disabled', true);
+                    $('#rowCiudad').hide();
+                }
+            }).fail(function () {
+                $('#checkoutColonia').html('<option value="">Error al buscar CP</option>').prop('disabled', true);
+            }).always(function () { $('#cpSpinner').hide(); });
+        }, 600);
+    });
+
     // ── Confirmar pedido ───────────────────────────────────────
     $('#btnConfirmarPedido').on('click', function () {
-        const direccion = $('#checkoutDireccion').val().trim();
-        if (!direccion) { $('#checkoutError').text('La dirección es requerida').removeClass('d-none'); return; }
+        const calle   = $('#checkoutCalle').val().trim();
+        const cp      = $('#checkoutCP').val().trim();
+        const colonia = $('#checkoutColonia').val();
+        const ciudad  = $('#checkoutCiudad').val().trim();
+        const estado  = $('#checkoutEstado').val().trim();
+
+        if (!calle || !cp || !colonia) {
+            $('#checkoutError').text('Completa la dirección: calle, CP y colonia son requeridos').removeClass('d-none');
+            return;
+        }
+        const direccion = calle + ', Col. ' + colonia + ', CP ' + cp + (ciudad ? ', ' + ciudad : '') + (estado ? ', ' + estado : '');
+
         if (!carrito.length) { $('#checkoutError').text('Tu carrito está vacío').removeClass('d-none'); return; }
 
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
