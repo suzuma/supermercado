@@ -58,13 +58,16 @@ class PuntosRepository
     }
 
     /**
-     * Acumula puntos al cliente al entregar el pedido.
-     * Siempre dentro de una transacción externa.
+     * Acumula puntos al cliente. pedido_id es null para ventas en POS.
      */
-    public function acumular(int $clienteId, int $pedidoId, float $totalPagado): void
+    public function acumular(int $clienteId, ?int $pedidoId, float $totalPagado, string $descripcion = ''): void
     {
         $puntosGanados = $this->calcularPuntosGanados($totalPagado);
         if ($puntosGanados <= 0) return;
+
+        if ($descripcion === '') {
+            $descripcion = $pedidoId ? "Compra — pedido #{$pedidoId}" : "Compra en tienda";
+        }
 
         Cliente::where('id', $clienteId)->increment('puntos', $puntosGanados);
 
@@ -73,7 +76,7 @@ class PuntosRepository
         $tx->pedido_id  = $pedidoId;
         $tx->tipo       = 'ganado';
         $tx->puntos     = $puntosGanados;
-        $tx->descripcion = "Compra — pedido #{$pedidoId}";
+        $tx->descripcion = $descripcion;
         $tx->created_at = date('Y-m-d H:i:s');
         $tx->save();
     }

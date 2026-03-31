@@ -3,6 +3,7 @@ namespace App\Repositories;
 
 use App\Helpers\ResponseHelper;
 use App\Models\{Venta, VentaDetalle, Producto};
+use App\Repositories\PuntosRepository;
 use App\Services\AuditoriaService;
 use Core\{Auth, Log};
 use Exception;
@@ -112,6 +113,19 @@ class VentaRepository
         if ($rh->response) {
             $ventaId = $rh->result['venta_id'] ?? null;
             AuditoriaService::registrar('ventas', 'registrar', "Venta #{$ventaId} — Total: \${$total}", $ventaId);
+
+            if ($clienteId) {
+                try {
+                    (new PuntosRepository())->acumular(
+                        $clienteId,
+                        null,
+                        $total,
+                        "Compra en caja — venta #{$ventaId}"
+                    );
+                } catch (\Exception $e) {
+                    Log::error(VentaRepository::class, 'Puntos no acumulados: ' . $e->getMessage());
+                }
+            }
         }
 
         return $rh;
