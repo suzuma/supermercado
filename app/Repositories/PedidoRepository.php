@@ -166,12 +166,15 @@ class PedidoRepository
             $pedido->exists = true;
             $pedido->save();
 
-            // Acumular puntos al entregar; revertir canje si se cancela después de pendiente
-            $puntosRepo = new PuntosRepository();
-            if ($estado === 'entregado') {
-                $puntosRepo->acumular((int)$pedido->cliente_id, $pedido->id, (float)$pedido->total);
-            } elseif ($estado === 'cancelado' && $pedido->puntos_usados > 0) {
-                $puntosRepo->revertirCanje((int)$pedido->cliente_id, $pedido->id, (int)$pedido->puntos_usados);
+            try {
+                $puntosRepo = new PuntosRepository();
+                if ($estado === 'entregado') {
+                    $puntosRepo->acumular((int)$pedido->cliente_id, $pedido->id, (float)$pedido->total);
+                } elseif ($estado === 'cancelado' && $pedido->puntos_usados > 0) {
+                    $puntosRepo->revertirCanje((int)$pedido->cliente_id, $pedido->id, (int)$pedido->puntos_usados);
+                }
+            } catch (Exception $e) {
+                Log::error(PedidoRepository::class, 'Puntos no procesados: ' . $e->getMessage());
             }
 
             $rh->setResponse(true, 'Estado actualizado a: ' . ucfirst($estado));
