@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\{Categoria, Producto, Pedido, PedidoDetalle, Cliente};
+use App\Models\{Categoria, Producto, Pedido, PedidoDetalle, Cliente, CodigoPostal};
 use App\Repositories\{ProductoRepository, CategoriaRepository, PedidoRepository, PromocionRepository, CuponRepository, ResenaRepository, WishlistRepository, ClienteRepository, PuntosRepository};
 use App\Helpers\{ResponseHelper, MailHelper};
 use App\Models\Configuracion;
@@ -1028,6 +1028,38 @@ class TiendaController extends Controller
             return password_verify($password, $hash);
         }
         return hash_equals($hash, sha1($password));
+    }
+
+    // ── Colonias por código postal (Ajax, público) ────────────
+    public function getColonias(): void
+    {
+        $cp = preg_replace('/\D/', '', $_GET['cp'] ?? '');
+        $rh = new ResponseHelper();
+
+        if (strlen($cp) !== 5) {
+            echo json_encode($rh->setResponse(false, 'CP inválido'));
+            return;
+        }
+
+        $filas = CodigoPostal::where('cp', $cp)
+            ->orderBy('colonia')
+            ->get(['colonia', 'municipio', 'estado', 'ciudad']);
+
+        if ($filas->isEmpty()) {
+            echo json_encode($rh->setResponse(false, 'CP no encontrado'));
+            return;
+        }
+
+        $primero = $filas->first();
+
+        $rh->setResponse(true, 'OK');
+        $rh->result = [
+            'colonias'  => $filas->pluck('colonia')->unique()->values()->toArray(),
+            'municipio' => $primero->municipio,
+            'ciudad'    => $primero->ciudad ?: $primero->municipio,
+            'estado'    => $primero->estado,
+        ];
+        echo json_encode($rh);
     }
 
     private function esBcrypt(string $hash): bool
