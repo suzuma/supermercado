@@ -1,0 +1,165 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="container-fluid px-3 py-3" style="max-width:600px;margin:0 auto">
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h1 style="font-size:1.3rem;font-weight:700;margin:0">Mis entregas</h1>
+            <small class="text-muted">{{ user().nombre }} {{ user().apellido }}</small>
+        </div>
+        <span class="badge badge-pill badge-primary" style="font-size:.9rem;padding:6px 12px">
+            {{ pedidos|length }} activo{{ pedidos|length != 1 ? 's' : '' }}
+        </span>
+    </div>
+
+    {% if pedidos|length == 0 %}
+    <div class="text-center py-5">
+        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No tienes entregas activas asignadas.</p>
+    </div>
+    {% endif %}
+
+    {% for pedido in pedidos %}
+    <div class="card mb-3 shadow-sm" id="card-{{ pedido.id }}">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <strong>#{{ pedido.id|padLeft(5) }}</strong>
+            <span class="badge badge-pill
+                {% if pedido.estado == 'confirmado' %}badge-info
+                {% elseif pedido.estado == 'enviado' %}badge-warning
+                {% endif %}">
+                <i class="fas fa-{{ pedido.estado == 'enviado' ? 'truck' : 'check' }} mr-1"></i>
+                {{ pedido.estado|capitalize }}
+            </span>
+        </div>
+        <div class="card-body py-2">
+
+            {# Cliente y dirección #}
+            <div class="mb-2">
+                <div class="font-weight-bold">
+                    <i class="fas fa-user mr-1 text-muted"></i>
+                    {{ pedido.cliente.nombre }} {{ pedido.cliente.apellido }}
+                </div>
+                {% if pedido.cliente.telefono %}
+                <a href="tel:{{ pedido.cliente.telefono }}" class="text-muted small">
+                    <i class="fas fa-phone mr-1"></i>{{ pedido.cliente.telefono }}
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="mb-2">
+                <a href="https://maps.google.com/?q={{ pedido.direccion_entrega|url_encode }}"
+                   target="_blank" rel="noopener"
+                   class="text-dark small">
+                    <i class="fas fa-map-marker-alt mr-1 text-danger"></i>
+                    {{ pedido.direccion_entrega }}
+                </a>
+            </div>
+
+            {# Productos #}
+            <div class="mb-2" style="font-size:.85rem;border-top:1px solid #f0f0f0;padding-top:.5rem">
+                {% for detalle in pedido.detalles %}
+                <div class="d-flex justify-content-between text-muted">
+                    <span>{{ detalle.cantidad }}× {{ detalle.producto.nombre }}</span>
+                    <span>${{ detalle.subtotal|number_format(2, '.', ',') }}</span>
+                </div>
+                {% endfor %}
+                <div class="d-flex justify-content-between font-weight-bold mt-1">
+                    <span>Total</span>
+                    <span>${{ pedido.total|number_format(2, '.', ',') }}</span>
+                </div>
+            </div>
+
+            {# Acciones #}
+            <div class="mt-2">
+                {% if pedido.estado == 'confirmado' %}
+                <button class="btn btn-warning btn-block btn-lg btnAccion"
+                        data-id="{{ pedido.id }}" data-estado="enviado"
+                        style="font-size:1rem">
+                    <i class="fas fa-truck mr-2"></i> En camino
+                </button>
+                {% elseif pedido.estado == 'enviado' %}
+                <button class="btn btn-success btn-block btn-lg btnAccion"
+                        data-id="{{ pedido.id }}" data-estado="entregado"
+                        style="font-size:1rem">
+                    <i class="fas fa-check-circle mr-2"></i> Marcar como entregado
+                </button>
+                {% endif %}
+            </div>
+
+        </div>
+        <div class="card-footer text-muted small py-1">
+            <i class="fas fa-clock mr-1"></i> {{ pedido.created_at|date('d/m/Y H:i') }}
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    $('.btnAccion').on('click', function () {
+        const btn    = $(this);
+        const id     = btn.data('id');
+        const estado = btn.data('estado');
+
+        const textos = {
+            enviado:   '¿Confirmar que ya saliste con este pedido?',
+            entregado: '¿Confirmar que el pedido fue entregado al cliente?',
+        };
+
+        Swal.fire({
+            icon: 'question',
+            title: textos[estado],
+            showCancelButton: true,
+            confirmButtonText: estado === 'entregado'
+                ? '<i class="fas fa-check mr-1"></i> Sí, entregado'
+                : '<i class="fas fa-truck mr-1"></i> Sí, en camino',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: estado === 'entregado' ? '#28a745' : '#ffc107',
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Actualizando...');
+
+            $.ajax({
+                url: base_url('repartidor/entregar'), method: 'POST',
+                data: { id: id, estado: estado, _csrf_token: '{{ csrf_token() }}' },
+                dataType: 'json',
+                success: function (res) {
+                    if (res.response) {
+                        if (estado === 'entregado') {
+                            Swal.fire({
+                                icon: 'success', title: '¡Entregado!',
+                                timer: 1500, showConfirmButton: false,
+                            }).then(function () {
+                                $('#card-' + id).fadeOut(400, function () { $(this).remove(); });
+                                const badge = $('[class*="badge-pill"]').first();
+                                const n = parseInt(badge.text()) - 1;
+                                badge.text(n + ' activo' + (n !== 1 ? 's' : ''));
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'success', title: 'Estado actualizado',
+                                timer: 1200, showConfirmButton: false,
+                            }).then(function () { location.reload(); });
+                        }
+                    } else {
+                        Swal.fire({ icon: 'error', title: res.message });
+                        btn.prop('disabled', false);
+                    }
+                },
+                error: function () {
+                    Swal.fire({ icon: 'error', title: 'Error de conexión' });
+                    btn.prop('disabled', false);
+                }
+            });
+        });
+    });
+
+});
+</script>
+{% endblock %}

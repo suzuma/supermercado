@@ -78,6 +78,15 @@ $router->group(['before' => 'auth'], function ($router) {
         $router->post('/pedidos/cancelar', ['App\\Controllers\\PedidosController', 'postCancelar']);
     });
 
+    // ── Repartidor ────────────────────────────────────────────
+    $router->group(['before' => 'can:pedidos.ver'], function ($router) {
+        $router->get('/repartidor', ['App\\Controllers\\RepartidorController', 'getIndex']);
+    });
+
+    $router->group(['before' => 'can:pedidos.gestionar'], function ($router) {
+        $router->post('/repartidor/entregar', ['App\\Controllers\\RepartidorController', 'postEntregar']);
+    });
+
     // ── Reportes ──────────────────────────────────────────────
     $router->group(['before' => 'can:reportes.ver'], function ($router) {
         $router->get('/reportes',                ['App\\Controllers\\ReportesController', 'getIndex']);

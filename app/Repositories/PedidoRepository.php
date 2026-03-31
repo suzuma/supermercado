@@ -266,6 +266,22 @@ class PedidoRepository
         }
     }
 
+    // ── Pedidos asignados a un repartidor ────────────────────
+    public function listarDeRepartidor(int $usuarioId): Collection
+    {
+        try {
+            return $this->model
+                ->with(['cliente', 'detalles.producto'])
+                ->where('usuario_id', $usuarioId)
+                ->whereIn('estado', ['confirmado', 'enviado'])
+                ->orderByDesc('created_at')
+                ->get();
+        } catch (Exception $e) {
+            Log::error(PedidoRepository::class, $e->getMessage());
+            return collect();
+        }
+    }
+
     // ── Asignar repartidor ────────────────────────────────────
     public function asignarRepartidor(int $id, int $usuarioId): ResponseHelper
     {

@@ -97,7 +97,7 @@
         {% endif %}
 
         {# Pedidos en línea #}
-        {% if can('pedidos.ver') %}
+        {% if can('pedidos.ver') and user().rol_id != 4 %}
         <a href="{{ 'pedidos'|url }}" class="sz-nav-item {% if _route == 'pedidos' %}sz-nav-item--active{% endif %}">
             <i class="fas fa-shopping-bag"></i>
             <span>Pedidos en línea</span>
@@ -106,6 +106,14 @@
                 {{ _cfg.pedidos_pendientes_total }}
             </span>
             {% endif %}
+        </a>
+        {% endif %}
+
+        {# Panel repartidor — solo rol 4 #}
+        {% if user().rol_id == 4 %}
+        <a href="{{ 'repartidor'|url }}" class="sz-nav-item {% if _route == 'repartidor' %}sz-nav-item--active{% endif %}">
+            <i class="fas fa-motorcycle"></i>
+            <span>Mis entregas</span>
         </a>
         {% endif %}
 
