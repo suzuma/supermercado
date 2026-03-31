@@ -42,6 +42,7 @@ class Controller {
         $this->provider->addFunction(new \Twig\TwigFunction('isAdmin',    ['App\\Middlewares\\RoleMiddleware', 'isAdmin']));
         $this->provider->addFunction(new \Twig\TwigFunction('isSeller',   ['App\\Middlewares\\RoleMiddleware', 'isSeller']));
         $this->provider->addFunction(new \Twig\TwigFunction('isAnalyst',  ['App\\Middlewares\\RoleMiddleware', 'isAnalyst']));
+        $this->provider->addFunction(new \Twig\TwigFunction('can',        ['App\\Middlewares\\RoleMiddleware', 'can']));
         $this->provider->addFunction(new \Twig\TwigFunction('csrf_token', ['Core\\Csrf', 'token']));
     }
 

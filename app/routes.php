@@ -71,6 +71,9 @@ $router->group(['before' => 'auth'], function($router){
     $router->post('/cupones/guardar',      ['App\\Controllers\\CuponesController', 'postGuardar']);
     $router->post('/cupones/desactivar',   ['App\\Controllers\\CuponesController', 'postDesactivar']);
 
+    $router->get('/permisos',         ['App\\Controllers\\PermisosController', 'getIndex']);
+    $router->post('/permisos/guardar',['App\\Controllers\\PermisosController', 'postGuardar']);
+
     $router->get('/configuracion',                          ['App\\Controllers\\ConfiguracionController', 'getIndex']);
     $router->post('/configuracion/negocio',                 ['App\\Controllers\\ConfiguracionController', 'postNegocio']);
     $router->post('/configuracion/password',                ['App\\Controllers\\ConfiguracionController', 'postPassword']);

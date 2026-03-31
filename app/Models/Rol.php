@@ -1,17 +1,21 @@
 <?php
-/*
-    autor: Noe Cazarez Camargo
-    fecha: 2019-06-24
-    descripcion: MODELO DE LA TABLA DE ROLES
-*/
+declare(strict_types=1);
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 
-class Rol extends Model{
+class Rol extends Model
+{
     protected $table = 'roles';
 
     public function usuarios()
     {
         return $this->hasMany(Usuario::class);
+    }
+
+    public function permisos()
+    {
+        return $this->belongsToMany(Permiso::class, 'rol_permisos', 'rol_id', 'permiso_id');
     }
 }

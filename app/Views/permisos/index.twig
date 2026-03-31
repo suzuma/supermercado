@@ -1,0 +1,154 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <h1 class="sz-dash-title">Gestión de Permisos</h1>
+        <p class="sz-dash-subtitle">Asigna los permisos de acceso para cada rol del sistema.</p>
+    </div>
+
+    {# Selector de rol #}
+    <div class="sz-card mb-4">
+        <div class="sz-card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <label for="selectRol" class="form-label fw-bold">Rol a configurar</label>
+                    <select id="selectRol" class="form-control">
+                        {% for rol in roles %}
+                            {% if rol.id != 1 %}
+                            <option value="{{ rol.id }}">{{ rol.nombre }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mt-3 mt-md-0 d-flex align-items-end">
+                    <button id="btnGuardar" class="btn btn-primary">
+                        <i class="fas fa-save mr-2"></i> Guardar permisos
+                    </button>
+                </div>
+                <div class="col-md-4 mt-3 mt-md-0 d-flex align-items-end justify-content-end">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt mr-1"></i>
+                        El rol <strong>Administrador</strong> siempre tiene acceso total.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Datos de permisos por rol (JSON oculto para JS) #}
+    <script id="datosRoles" type="application/json">
+    {
+        {% for rol in roles %}
+        "{{ rol.id }}": [{% for p in rol.permisos %}{{ p.id }}{% if not loop.last %},{% endif %}{% endfor %}]
+        {% if not loop.last %},{% endif %}
+        {% endfor %}
+    }
+    </script>
+
+    {# Matriz de permisos #}
+    <div class="sz-card">
+        <div class="sz-card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0" id="tablaPermisos">
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width:50%">Permiso</th>
+                            <th class="text-center">Acceso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for modulo, grupo in permisos %}
+                        <tr class="table-secondary">
+                            <td colspan="2" class="fw-bold text-uppercase small">
+                                <i class="fas fa-layer-group mr-2"></i>{{ modulo|replace({'_': ' '}) }}
+                            </td>
+                        </tr>
+                        {% for permiso in grupo %}
+                        <tr>
+                            <td>
+                                <div class="font-weight-bold">{{ permiso.descripcion }}</div>
+                                <small class="text-muted">{{ permiso.slug }}</small>
+                            </td>
+                            <td class="text-center align-middle">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox"
+                                           class="custom-control-input permiso-check"
+                                           id="perm_{{ permiso.id }}"
+                                           data-id="{{ permiso.id }}">
+                                    <label class="custom-control-label" for="perm_{{ permiso.id }}"></label>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    const datosRoles  = JSON.parse(document.getElementById('datosRoles').textContent);
+    const selectRol   = document.getElementById('selectRol');
+    const btnGuardar  = document.getElementById('btnGuardar');
+    const checks      = document.querySelectorAll('.permiso-check');
+
+    function cargarPermisos(rolId) {
+        const activos = datosRoles[rolId] || [];
+        checks.forEach(function (chk) {
+            chk.checked = activos.includes(parseInt(chk.dataset.id));
+        });
+    }
+
+    selectRol.addEventListener('change', function () {
+        cargarPermisos(this.value);
+    });
+
+    btnGuardar.addEventListener('click', function () {
+        const rolId     = selectRol.value;
+        const seleccionados = [];
+
+        checks.forEach(function (chk) {
+            if (chk.checked) seleccionados.push(chk.dataset.id);
+        });
+
+        const formData = new FormData();
+        formData.append('_csrf_token', '{{ csrf_token() }}');
+        formData.append('rol_id', rolId);
+        seleccionados.forEach(function (id) {
+            formData.append('permisos[]', id);
+        });
+
+        btnGuardar.disabled = true;
+
+        fetch(base_url('permisos/guardar'), { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.response) {
+                    datosRoles[rolId] = seleccionados.map(Number);
+                    Swal.fire({ icon: 'success', title: res.message, timer: 1800, showConfirmButton: false });
+                } else {
+                    Swal.fire({ icon: 'error', title: res.message });
+                }
+            })
+            .catch(function () {
+                Swal.fire({ icon: 'error', title: 'Error de conexión' });
+            })
+            .finally(function () {
+                btnGuardar.disabled = false;
+            });
+    });
+
+    cargarPermisos(selectRol.value);
+}());
+</script>
+{% endblock %}

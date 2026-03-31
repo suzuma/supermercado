@@ -32,3 +32,10 @@ $router->filter('isAnalyst', function(){
         \App\Helpers\UrlHelper::redirect('');
     };
 });
+
+// Filtro RBAC dinámico — uso: ['before' => 'can:ventas.ver']
+$router->filter('can', function(string $slug){
+    if(!\App\Middlewares\RoleMiddleware::can($slug)){
+        \App\Helpers\UrlHelper::redirect('home');
+    };
+});

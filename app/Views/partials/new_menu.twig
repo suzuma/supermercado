@@ -1,6 +1,6 @@
 {#
     autor: Noe Cazarez Camargo
-    descripcion: SIDEBAR DE NAVEGACION — visible segun rol
+    descripcion: SIDEBAR DE NAVEGACION — visible segun permisos RBAC
 #}
 
 <aside class="sz-sidebar" id="szSidebar">
@@ -11,7 +11,6 @@
              alt="{{ _cfg.negocio_nombre }}"
              class="sz-sidebar-logo-img">
         <span class="sz-sidebar-logo-text">{{ _cfg.negocio_nombre }}</span>
-        {# Botón siempre al final para que no se oculte #}
         <button class="sz-sidebar-toggle" id="sidebarToggle" title="Expandir">
             <i class="fas fa-bars"></i>
         </button>
@@ -35,108 +34,133 @@
             <span>Dashboard</span>
         </a>
 
-        {# Inventario — admin y analista #}
-        {% if isAdmin() or isAnalyst() %}
-
-            <div class="sz-nav-group">
-                <span class="sz-nav-label">Operaciones</span>
-                <a href="{{ 'inventario'|url }}" class="sz-nav-item {% if _route == 'inventario' %}sz-nav-item--active{% endif %}">
-                    <i class="fas fa-boxes"></i>
-                    <span>Inventario</span>
-                    {% if _cfg.stock_bajo_total > 0 %}
-                    <span class="sz-nav-badge" title="{{ _cfg.stock_bajo_total }} producto{{ _cfg.stock_bajo_total != 1 ? 's' : '' }} con stock bajo">
-                        {{ _cfg.stock_bajo_total }}
-                    </span>
-                    {% endif %}
-                </a>
-                <a href="{{ 'proveedores'|url }}" class="sz-nav-item {% if _route == 'proveedores' %}sz-nav-item--active{% endif %}">
-                    <i class="fas fa-truck-loading"></i>
-                    <span>Proveedores</span>
-                </a>
-                <a href="{{ 'clientes'|url }}" class="sz-nav-item {% if _route == 'clientes' %}sz-nav-item--active{% endif %}">
-                    <i class="fas fa-users"></i><span>Clientes</span>
-                </a>
-            </div>
-
-
-        {% endif %}
-
-        {# Ventas — admin y cajero #}
-        {% if isAdmin() or isSeller() %}
-        {% if not (isAdmin() or isAnalyst()) %}
+        {# Grupo: Operaciones #}
+        {% if can('inventario.ver') or can('proveedores.ver') or can('clientes.ver') or can('ventas.ver') or can('corte_caja.ver') or can('devoluciones.ver') or can('promociones.ver') %}
         <div class="sz-nav-group">
             <span class="sz-nav-label">Operaciones</span>
-        </div>
-        {% endif %}
+
+            {% if can('inventario.ver') %}
+            <a href="{{ 'inventario'|url }}" class="sz-nav-item {% if _route == 'inventario' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-boxes"></i>
+                <span>Inventario</span>
+                {% if _cfg.stock_bajo_total > 0 %}
+                <span class="sz-nav-badge" title="{{ _cfg.stock_bajo_total }} producto{{ _cfg.stock_bajo_total != 1 ? 's' : '' }} con stock bajo">
+                    {{ _cfg.stock_bajo_total }}
+                </span>
+                {% endif %}
+            </a>
+            {% endif %}
+
+            {% if can('proveedores.ver') %}
+            <a href="{{ 'proveedores'|url }}" class="sz-nav-item {% if _route == 'proveedores' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-truck-loading"></i>
+                <span>Proveedores</span>
+            </a>
+            {% endif %}
+
+            {% if can('clientes.ver') %}
+            <a href="{{ 'clientes'|url }}" class="sz-nav-item {% if _route == 'clientes' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-users"></i>
+                <span>Clientes</span>
+            </a>
+            {% endif %}
+
+            {% if can('ventas.ver') %}
             <a href="{{ 'ventas'|url }}" class="sz-nav-item {% if _route == 'ventas' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-cash-register"></i>
                 <span>Ventas</span>
             </a>
+            {% endif %}
+
+            {% if can('corte_caja.ver') %}
             <a href="{{ 'corte-caja'|url }}" class="sz-nav-item {% if _route == 'corte-caja' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-calculator"></i>
                 <span>Corte de caja</span>
             </a>
+            {% endif %}
+
+            {% if can('devoluciones.ver') %}
             <a href="{{ 'devoluciones'|url }}" class="sz-nav-item {% if _route == 'devoluciones' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-undo"></i>
                 <span>Devoluciones</span>
             </a>
+            {% endif %}
+
+            {% if can('promociones.ver') %}
             <a href="{{ 'promociones'|url }}" class="sz-nav-item {% if _route == 'promociones' %}sz-nav-item--active{% endif %}">
-                <i class="fas fa-tags"></i><span>Promociones</span>
+                <i class="fas fa-tags"></i>
+                <span>Promociones</span>
             </a>
-        {% endif %}
+            {% endif %}
 
-        {# Pedidos en línea — admin y analista #}
-        {% if isAdmin() or isAnalyst() %}
-            <a href="{{ 'pedidos'|url }}" class="sz-nav-item {% if _route == 'pedidos' %}sz-nav-item--active{% endif %}">
-                <i class="fas fa-shopping-bag"></i>
-                <span>Pedidos en línea</span>
-                {% if _cfg.pedidos_pendientes_total > 0 %}
-                <span class="sz-nav-badge" title="{{ _cfg.pedidos_pendientes_total }} pedido{{ _cfg.pedidos_pendientes_total != 1 ? 's' : '' }} pendiente{{ _cfg.pedidos_pendientes_total != 1 ? 's' : '' }}">
-                    {{ _cfg.pedidos_pendientes_total }}
-                </span>
-                {% endif %}
-            </a>
-        {% endif %}
-
-        {# Empleados — solo admin #}
-        {% if isAdmin() %}
-        <div class="sz-nav-group">
-            <span class="sz-nav-label">Administración</span>
-            <a href="{{ 'empleados'|url }}" class="sz-nav-item {% if _route == 'empleados' %}sz-nav-item--active{% endif %}">
-                <i class="fas fa-users"></i>
-                <span>Empleados</span>
-            </a>
         </div>
         {% endif %}
 
+        {# Pedidos en línea #}
+        {% if can('pedidos.ver') %}
+        <a href="{{ 'pedidos'|url }}" class="sz-nav-item {% if _route == 'pedidos' %}sz-nav-item--active{% endif %}">
+            <i class="fas fa-shopping-bag"></i>
+            <span>Pedidos en línea</span>
+            {% if _cfg.pedidos_pendientes_total > 0 %}
+            <span class="sz-nav-badge" title="{{ _cfg.pedidos_pendientes_total }} pedido{{ _cfg.pedidos_pendientes_total != 1 ? 's' : '' }} pendiente{{ _cfg.pedidos_pendientes_total != 1 ? 's' : '' }}">
+                {{ _cfg.pedidos_pendientes_total }}
+            </span>
+            {% endif %}
+        </a>
+        {% endif %}
 
-        {# Reportes — admin y analista #}
-        {% if isAdmin() or isAnalyst() %}
-        {% if not isAdmin() %}
+        {# Grupo: Análisis #}
+        {% if can('reportes.ver') %}
         <div class="sz-nav-group">
             <span class="sz-nav-label">Análisis</span>
-        </div>
-        {% endif %}
             <a href="{{ 'reportes'|url }}" class="sz-nav-item {% if _route == 'reportes' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-chart-bar"></i>
                 <span>Reportes</span>
             </a>
+        </div>
         {% endif %}
 
-        {# Configuración, Cupones y Auditoría — solo admin #}
-        {% if isAdmin() %}
+        {# Grupo: Administración #}
+        {% if can('empleados.ver') or can('configuracion.ver') or can('cupones.ver') or can('auditoria.ver') %}
+        <div class="sz-nav-group">
+            <span class="sz-nav-label">Administración</span>
+
+            {% if can('empleados.ver') %}
+            <a href="{{ 'empleados'|url }}" class="sz-nav-item {% if _route == 'empleados' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-id-badge"></i>
+                <span>Empleados</span>
+            </a>
+            {% endif %}
+
+            {% if can('configuracion.ver') %}
             <a href="{{ 'configuracion'|url }}" class="sz-nav-item {% if _route == 'configuracion' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-cog"></i>
                 <span>Configuración</span>
             </a>
+            {% endif %}
+
+            {% if isAdmin() %}
+            <a href="{{ 'permisos'|url }}" class="sz-nav-item {% if _route == 'permisos' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-shield-alt"></i>
+                <span>Permisos</span>
+            </a>
+            {% endif %}
+
+            {% if can('cupones.ver') %}
             <a href="{{ 'cupones'|url }}" class="sz-nav-item {% if _route == 'cupones' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-ticket-alt"></i>
                 <span>Cupones</span>
             </a>
+            {% endif %}
+
+            {% if can('auditoria.ver') %}
             <a href="{{ 'auditoria'|url }}" class="sz-nav-item {% if _route == 'auditoria' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-clipboard-list"></i>
                 <span>Auditoría</span>
             </a>
+            {% endif %}
+
+        </div>
         {% endif %}
 
     </nav>

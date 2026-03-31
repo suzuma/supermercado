@@ -1,26 +1,41 @@
 <?php
-/*
-    autor: Noe Cazarez Camargo
-    fecha: 2019-06-24
-    descripcion: 
-*/
+declare(strict_types=1);
+
 namespace App\Middlewares;
 
+use App\Repositories\PermisoRepository;
 use Core\Auth;
 
-class RoleMiddleware {
-    public static function isAdmin() {
-        $user = Auth::getCurrentUser();
-        return $user->rol_id === 1;
+class RoleMiddleware
+{
+    public static function isAdmin(): bool
+    {
+        return Auth::getCurrentUser()->rol_id === 1;
     }
 
-    public static function isSeller() {
-        $user = Auth::getCurrentUser();
-        return $user->rol_id === 2 || $user->rol_id === 1;
+    public static function isSeller(): bool
+    {
+        $rolId = Auth::getCurrentUser()->rol_id;
+        return $rolId === 1 || $rolId === 2;
     }
 
-    public static function isAnalyst() {
+    public static function isAnalyst(): bool
+    {
+        $rolId = Auth::getCurrentUser()->rol_id;
+        return $rolId === 1 || $rolId === 3;
+    }
+
+    public static function can(string $slug): bool
+    {
         $user = Auth::getCurrentUser();
-        return $user->rol_id === 3 || $user->rol_id === 1;
+
+        if ($user->rol_id === 1) {
+            return true;
+        }
+
+        $repo     = new PermisoRepository();
+        $permisos = $repo->obtenerPermisosDeRol((int)$user->rol_id);
+
+        return in_array($slug, $permisos, true);
     }
 }
