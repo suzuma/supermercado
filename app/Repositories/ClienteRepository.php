@@ -103,9 +103,9 @@ class ClienteRepository
             $cliente->activo           = 1;
 
             if ($esNuevo) {
-                $cliente->password = sha1($model->password ?: 'cliente123');
+                $cliente->password = password_hash($model->password ?: 'cliente123', PASSWORD_BCRYPT, ['cost' => 12]);
             } elseif (!empty($model->password)) {
-                $cliente->password = sha1($model->password);
+                $cliente->password = password_hash($model->password, PASSWORD_BCRYPT, ['cost' => 12]);
             }
 
             if (!$esNuevo) {

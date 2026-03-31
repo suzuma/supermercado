@@ -104,7 +104,7 @@ class EmpleadoRepository
                 $usuario->nombre   = $data['nombre'];
                 $usuario->apellido = $data['apellido'];
                 $usuario->email    = $data['email'];
-                $usuario->password = sha1($data['password']);
+                $usuario->password = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
                 $usuario->activo   = 1;
                 $usuario->save();
 
@@ -137,7 +137,7 @@ class EmpleadoRepository
                 $usuario->exists   = true;
 
                 if (!empty($data['password'])) {
-                    $usuario->password = sha1($data['password']);
+                    $usuario->password = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
                 }
 
                 $usuario->save();

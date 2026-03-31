@@ -61,12 +61,35 @@ class UsuarioRepository {
         return $rh;
     }
 
+    public function cambiarPassword(int $userId, string $actual, string $nueva): ResponseHelper
+    {
+        $rh = new ResponseHelper;
+
+        try {
+            $usuario = $this->usuario->findOrFail($userId);
+
+            if (!$this->verificarPassword($actual, $usuario->password)) {
+                return $rh->setResponse(false, 'La contraseña actual es incorrecta');
+            }
+
+            $usuario->password = password_hash($nueva, PASSWORD_BCRYPT, ['cost' => 12]);
+            $usuario->exists   = true;
+            $usuario->save();
+
+            $rh->setResponse(true, 'Contraseña actualizada correctamente');
+        } catch (Exception $e) {
+            Log::error(UsuarioRepository::class, $e->getMessage());
+            $rh->setResponse(false, 'No se pudo actualizar la contraseña');
+        }
+
+        return $rh;
+    }
+
     private function verificarPassword(string $password, string $hash): bool
     {
         if ($this->esBcrypt($hash)) {
             return password_verify($password, $hash);
         }
-        // Soporte legacy para hashes SHA1 existentes en BD
         return hash_equals($hash, sha1($password));
     }
 

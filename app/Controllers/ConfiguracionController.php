@@ -88,41 +88,27 @@ class ConfiguracionController extends Controller
     {
         $rh = new ResponseHelper();
 
-        try {
-            $actual   = $_POST['password_actual'] ?? '';
-            $nueva    = $_POST['password_nueva'] ?? '';
-            $confirma = $_POST['password_confirma'] ?? '';
+        $actual   = $_POST['password_actual']  ?? '';
+        $nueva    = $_POST['password_nueva']   ?? '';
+        $confirma = $_POST['password_confirma'] ?? '';
 
-            if (empty($actual) || empty($nueva) || empty($confirma)) {
-                return $rh->setResponse(false, 'Todos los campos son requeridos');
-            }
-
-            if (strlen($nueva) < 6) {
-                return $rh->setResponse(false, 'La nueva contraseña debe tener mínimo 6 caracteres');
-            }
-
-            if ($nueva !== $confirma) {
-                return $rh->setResponse(false, 'Las contraseñas no coinciden');
-            }
-
-            $userId  = Auth::getCurrentUser()->id;
-            $usuario = Usuario::findOrFail($userId);
-
-            if ($usuario->password !== sha1($actual)) {
-                return $rh->setResponse(false, 'La contraseña actual es incorrecta');
-            }
-
-            $usuario->password = sha1($nueva);
-            $usuario->exists   = true;
-            $usuario->save();
-
-            $rh->setResponse(true, 'Contraseña actualizada correctamente');
-        } catch (\Exception $e) {
-            Log::error(ConfiguracionController::class, $e->getMessage());
-            $rh->setResponse(false, 'No se pudo actualizar la contraseña');
+        if (empty($actual) || empty($nueva) || empty($confirma)) {
+            echo json_encode($rh->setResponse(false, 'Todos los campos son requeridos'));
+            return;
         }
 
-        echo json_encode($rh);
+        if (strlen($nueva) < 6) {
+            echo json_encode($rh->setResponse(false, 'La nueva contraseña debe tener mínimo 6 caracteres'));
+            return;
+        }
+
+        if ($nueva !== $confirma) {
+            echo json_encode($rh->setResponse(false, 'Las contraseñas no coinciden'));
+            return;
+        }
+
+        $userId = Auth::getCurrentUser()->id;
+        echo json_encode($this->usuarioRepo->cambiarPassword($userId, $actual, $nueva));
     }
 
     // ── Guardar usuario (gestión) ─────────────────────────────
@@ -153,7 +139,7 @@ class ConfiguracionController extends Controller
             $usuario->activo   = $_POST['activo'] ?? 1;
 
             if (!empty($_POST['password'])) {
-                $usuario->password = sha1($_POST['password']);
+                $usuario->password = password_hash($_POST['password'], PASSWORD_BCRYPT, ['cost' => 12]);
             }
 
             if (!$esNuevo) {
