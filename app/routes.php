@@ -28,13 +28,16 @@ $router->group(['before' => 'auth'], function ($router) {
         $router->get('/inventario/formulario',        ['App\\Controllers\\InventarioController', 'getFormulario']);
         $router->get('/inventario/formulario/{id}',   ['App\\Controllers\\InventarioController', 'getFormulario']);
         $router->get('/inventario/imprimirEtiquetas', ['App\\Controllers\\InventarioController', 'getImprimirEtiquetas']);
+        $router->get('/inventario/merma',             ['App\\Controllers\\InventarioController', 'getMerma']);
         $router->post('/inventario/buscarCodigo',     ['App\\Controllers\\InventarioController', 'postBuscarCodigo']);
     });
 
     $router->group(['before' => 'can:inventario.editar'], function ($router) {
-        $router->post('/inventario/guardar',      ['App\\Controllers\\InventarioController', 'postGuardar']);
-        $router->post('/inventario/eliminar',     ['App\\Controllers\\InventarioController', 'postEliminar']);
-        $router->post('/inventario/generarCodigo',['App\\Controllers\\InventarioController', 'postGenerarCodigo']);
+        $router->post('/inventario/guardar',         ['App\\Controllers\\InventarioController', 'postGuardar']);
+        $router->post('/inventario/eliminar',        ['App\\Controllers\\InventarioController', 'postEliminar']);
+        $router->post('/inventario/generarCodigo',   ['App\\Controllers\\InventarioController', 'postGenerarCodigo']);
+        $router->post('/inventario/procesarVencidos',['App\\Controllers\\InventarioController', 'postProcesarVencidos']);
+        $router->post('/inventario/registrarMerma',  ['App\\Controllers\\InventarioController', 'postRegistrarMerma']);
     });
 
     // ── Corte de caja ─────────────────────────────────────────

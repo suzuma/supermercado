@@ -1,0 +1,270 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Reporte de merma</h1>
+            <p class="sz-dash-sub">Bajas por vencimiento, daño u otro motivo</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            {% if can('inventario.editar') %}
+            <button class="btn btn-outline-warning btn-sm" id="btnProcesarVencidos">
+                <i class="fas fa-trash-alt mr-1"></i> Dar de baja vencidos
+            </button>
+            <button class="btn btn-sz btn-sm" data-toggle="modal" data-target="#modalMermaManual">
+                <i class="fas fa-plus mr-1"></i> Registrar merma
+            </button>
+            {% endif %}
+            <a href="{{ 'inventario'|url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left mr-1"></i> Inventario
+            </a>
+        </div>
+    </div>
+
+    {# Filtro de fecha #}
+    <div class="sz-dash-card animate-in mb-3" style="--delay:.03s">
+        <div class="p-3">
+            <form method="GET" action="{{ 'inventario/merma'|url }}" class="form-inline">
+                <label class="mr-2 font-weight-bold">Filtrar por fecha:</label>
+                <input type="date" name="fecha" class="form-control form-control-sm mr-2" value="{{ fecha }}">
+                <button type="submit" class="btn btn-sz btn-sm mr-2">Filtrar</button>
+                <a href="{{ 'inventario/merma'|url }}" class="btn btn-outline-secondary btn-sm">Ver todo</a>
+            </form>
+        </div>
+    </div>
+
+    {# Resumen del mes #}
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="sz-dash-card animate-in" style="--delay:.05s">
+                <div class="p-3 text-center">
+                    <p class="sz-info-label mb-1">Pérdida estimada este mes</p>
+                    <span class="sz-venta-monto" style="font-size:1.5rem">
+                        ${{ total_mes|number_format(2, '.', ',') }}
+                    </span>
+                    <p class="text-muted small mt-1">Calculado al precio de compra</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Tabla de merma #}
+    <div class="sz-dash-card animate-in" style="--delay:.1s">
+        <div class="sz-card-header">
+            <span class="sz-card-title"><i class="fas fa-trash-alt"></i> Registros ({{ total }})</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Producto</th>
+                        <th class="text-center">Cantidad</th>
+                        <th class="text-center">Motivo</th>
+                        <th>Notas</th>
+                        <th>Registrado por</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in datos %}
+                    <tr>
+                        <td class="text-muted small">{{ m.id }}</td>
+                        <td><span class="sz-prod-nombre">{{ m.producto.nombre }}</span></td>
+                        <td class="text-center">{{ m.cantidad }}</td>
+                        <td class="text-center">
+                            <span class="badge badge-{{ m.motivo == 'vencimiento' ? 'danger' : (m.motivo == 'daño' ? 'warning' : 'secondary') }}">
+                                {{ m.motivo|capitalize }}
+                            </span>
+                        </td>
+                        <td class="text-muted small">{{ m.notas ?? '—' }}</td>
+                        <td>{{ m.usuario.nombre ?? '—' }}</td>
+                        <td class="text-muted small">{{ m.created_at|date('d/m/Y H:i') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">Sin registros para esta fecha</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# Paginación #}
+        {% if total_pages > 1 %}
+        <div class="p-3 d-flex justify-content-center">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% for p in 1..total_pages %}
+                    <li class="page-item {{ p == pagina ? 'active' : '' }}">
+                        <a class="page-link" href="{{ ('inventario/merma?pagina=' ~ p ~ '&fecha=' ~ fecha)|url }}">{{ p }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Modal merma manual #}
+{% if can('inventario.editar') %}
+<div class="modal fade" id="modalMermaManual" tabindex="-1" aria-labelledby="modalMermaLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalMermaLabel">Registrar merma</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="mermaBusqueda">Producto</label>
+                    <input type="text" id="mermaBusqueda" class="form-control" placeholder="Buscar por nombre...">
+                    <input type="hidden" id="mermaProductoId">
+                    <div id="mermaResultados" class="list-group mt-1" style="display:none"></div>
+                </div>
+                <div id="mermaProductoInfo" class="alert alert-info py-2" style="display:none"></div>
+                <div class="form-group">
+                    <label for="mermaCantidad">Cantidad a dar de baja</label>
+                    <input type="number" id="mermaCantidad" class="form-control" min="0.001" step="0.001" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="mermaMotivo">Motivo</label>
+                    <select id="mermaMotivo" class="form-control">
+                        <option value="vencimiento">Vencimiento</option>
+                        <option value="daño">Daño</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mermaNotas">Notas <small class="text-muted">(opcional)</small></label>
+                    <textarea id="mermaNotas" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sz" id="btnGuardarMerma">
+                    <i class="fas fa-save mr-1"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    // ── Dar de baja vencidos ──────────────────────────────────
+    $('#btnProcesarVencidos').on('click', function () {
+        Swal.fire({
+            icon: 'warning',
+            title: '¿Dar de baja productos vencidos?',
+            html: 'Se desactivarán todos los productos con <strong>fecha de caducidad vencida</strong> y se registrará su stock como merma.',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-trash-alt mr-1"></i> Sí, procesar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc3545',
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            const btn = $('#btnProcesarVencidos').prop('disabled', true);
+            $.ajax({
+                url: base_url('inventario/procesarVencidos'), method: 'POST',
+                data: { _csrf_token: '{{ csrf_token() }}' }, dataType: 'json',
+                success: function (res) {
+                    if (res.response) {
+                        Swal.fire({ icon: 'success', title: res.message, timer: 2000, showConfirmButton: false })
+                            .then(() => location.reload());
+                    } else {
+                        Swal.fire({ icon: 'error', title: res.message });
+                        btn.prop('disabled', false);
+                    }
+                },
+                error: function () {
+                    Swal.fire({ icon: 'error', title: 'Error de conexión' });
+                    btn.prop('disabled', false);
+                }
+            });
+        });
+    });
+
+    // ── Búsqueda de producto en modal ─────────────────────────
+    let busqTimer;
+    $('#mermaBusqueda').on('input', function () {
+        clearTimeout(busqTimer);
+        const q = $(this).val().trim();
+        if (q.length < 2) { $('#mermaResultados').hide(); return; }
+
+        busqTimer = setTimeout(function () {
+            $.post(base_url('inventario/buscarCodigo'), { _csrf_token: '{{ csrf_token() }}', codigo: q }, function () {})
+                .always(function () {});
+
+            $.ajax({
+                url: base_url('ventas/buscarProducto'), method: 'POST',
+                data: { _csrf_token: '{{ csrf_token() }}', termino: q, tipo: 'nombre' },
+                success: function (res) {
+                    const $list = $('#mermaResultados').empty().show();
+                    res.slice(0, 5).forEach(function (p) {
+                        $('<a class="list-group-item list-group-item-action py-1">')
+                            .text(p.nombre + ' — Stock: ' + p.stock)
+                            .on('click', function () {
+                                $('#mermaProductoId').val(p.id);
+                                $('#mermaBusqueda').val(p.nombre);
+                                $('#mermaProductoInfo').text('Stock actual: ' + p.stock).show();
+                                $list.hide();
+                            })
+                            .appendTo($list);
+                    });
+                    if (!res.length) $list.html('<span class="list-group-item text-muted">Sin resultados</span>');
+                }
+            });
+        }, 300);
+    });
+
+    // ── Guardar merma manual ──────────────────────────────────
+    $('#btnGuardarMerma').on('click', function () {
+        const productoId = $('#mermaProductoId').val();
+        const cantidad   = parseFloat($('#mermaCantidad').val());
+        const motivo     = $('#mermaMotivo').val();
+
+        if (!productoId || !cantidad || cantidad <= 0) {
+            Swal.fire({ icon: 'warning', title: 'Completa el producto y la cantidad' });
+            return;
+        }
+
+        $(this).prop('disabled', true);
+        $.ajax({
+            url: base_url('inventario/registrarMerma'), method: 'POST',
+            data: {
+                _csrf_token: '{{ csrf_token() }}',
+                producto_id: productoId,
+                cantidad:    cantidad,
+                motivo:      motivo,
+                notas:       $('#mermaNotas').val(),
+            },
+            dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    Swal.fire({ icon: 'success', title: res.message, timer: 1500, showConfirmButton: false })
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire({ icon: 'error', title: res.message });
+                    $('#btnGuardarMerma').prop('disabled', false);
+                }
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error de conexión' });
+                $('#btnGuardarMerma').prop('disabled', false);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

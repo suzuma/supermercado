@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Helpers\ResponseHelper;
+use App\Models\Configuracion;
 use App\Repositories\{VentaRepository, ProductoRepository, ClienteRepository, PromocionRepository};
 use Core\{Controller, Log};
 
@@ -67,7 +68,10 @@ class VentasController extends Controller
             $resultado = $this->productoRepo->listar(1, 10, null, $termino)['datos'];
         }
 
-        $resultado = collect($resultado)->map(function ($producto) {
+        $pctProximo = (float)Configuracion::get('descuento_proximo', '15');
+        $pctCritico = (float)Configuracion::get('descuento_critico', '30');
+
+        $resultado = collect($resultado)->map(function ($producto) use ($pctProximo, $pctCritico) {
             $promo       = $this->promoRepo->obtenerDeProducto($producto->id);
             $productoArr = $producto->toArray();
 
@@ -82,8 +86,23 @@ class VentasController extends Controller
                     'precio_final' => $calculo['precio_final'],
                     'descripcion'  => $calculo['descripcion'],
                 ];
+                $productoArr['descuento_caducidad'] = null;
             } else {
                 $productoArr['promo'] = null;
+
+                $estadoCad = $producto->estado_caducidad;
+                if ($estadoCad === 'critico' || $estadoCad === 'proximo') {
+                    $pct         = $estadoCad === 'critico' ? $pctCritico : $pctProximo;
+                    $precioFinal = round($producto->precio_venta * (1 - $pct / 100), 2);
+                    $productoArr['descuento_caducidad'] = [
+                        'estado'       => $estadoCad,
+                        'porcentaje'   => $pct,
+                        'precio_final' => $precioFinal,
+                        'descripcion'  => "{$pct}% dto. por caducidad ({$producto->dias_para_vencer} días)",
+                    ];
+                } else {
+                    $productoArr['descuento_caducidad'] = null;
+                }
             }
 
             return $productoArr;

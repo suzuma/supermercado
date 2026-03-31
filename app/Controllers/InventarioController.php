@@ -5,7 +5,7 @@ namespace App\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Models\Producto;
-use App\Repositories\{ProductoRepository, CategoriaRepository, ProveedorRepository};
+use App\Repositories\{ProductoRepository, CategoriaRepository, ProveedorRepository, MermaRepository};
 use App\Validations\ProductoValidation;
 use Core\{Controller, Log};
 
@@ -14,6 +14,7 @@ class InventarioController extends Controller
     private $productoRepo;
     private $categoriaRepo;
     private $proveedorRepo;
+    private $mermaRepo;
 
     public function __construct()
     {
@@ -21,6 +22,7 @@ class InventarioController extends Controller
         $this->productoRepo  = new ProductoRepository();
         $this->categoriaRepo = new CategoriaRepository();
         $this->proveedorRepo = new ProveedorRepository();
+        $this->mermaRepo     = new MermaRepository();
     }
 
     // ── Listado principal ─────────────────────────────────────
@@ -135,6 +137,46 @@ class InventarioController extends Controller
 
         $rh = $this->productoRepo->generarCodigo($id);
         echo json_encode($rh);
+    }
+
+    // ── Merma ─────────────────────────────────────────────────
+    public function getMerma()
+    {
+        $pagina    = (int)($_GET['pagina'] ?? 1);
+        $fecha     = $_GET['fecha'] ?? null;
+        $resultado = $this->mermaRepo->listar($pagina, 20, $fecha ?: null);
+        $totalMes  = $this->mermaRepo->totalMes();
+
+        return $this->render('inventario/merma.twig', array_merge($resultado, [
+            'title'     => 'Reporte de merma',
+            'total_mes' => $totalMes,
+            'fecha'     => $fecha ?? date('Y-m-d'),
+        ]));
+    }
+
+    public function postRegistrarMerma()
+    {
+        $rh         = new ResponseHelper();
+        $productoId = (int)($_POST['producto_id'] ?? 0);
+        $cantidad   = (float)($_POST['cantidad'] ?? 0);
+        $motivo     = trim($_POST['motivo'] ?? '');
+
+        if (!$productoId || $cantidad <= 0 || empty($motivo)) {
+            echo json_encode($rh->setResponse(false, 'Datos incompletos'));
+            return;
+        }
+
+        echo json_encode($this->mermaRepo->registrar([
+            'producto_id' => $productoId,
+            'cantidad'    => $cantidad,
+            'motivo'      => $motivo,
+            'notas'       => trim($_POST['notas'] ?? ''),
+        ]));
+    }
+
+    public function postProcesarVencidos()
+    {
+        echo json_encode($this->mermaRepo->darDeBajaVencidos());
     }
 
     // ── Imprimir etiquetas ────────────────────────────────────
