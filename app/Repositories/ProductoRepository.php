@@ -27,7 +27,7 @@ class ProductoRepository
     {
         try {
             $query = $this->model
-                ->with(['categoria', 'proveedor'])
+                ->with(['categoria', 'proveedor', 'promocionVigente'])
                 ->activos();
 
             if ($categoria_id) {

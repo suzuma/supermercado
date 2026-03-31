@@ -56,6 +56,15 @@ class Producto extends Model
         return $this->belongsTo(Proveedor::class);
     }
 
+    public function promocionVigente()
+    {
+        $hoy = date('Y-m-d');
+        return $this->hasOne(Promocion::class)
+            ->where('activo', 1)
+            ->where('fecha_inicio', '<=', $hoy)
+            ->where('fecha_fin', '>=', $hoy);
+    }
+
     public function scopeActivos($query)
     {
         return $query->where('activo', 1);

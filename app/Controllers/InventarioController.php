@@ -5,7 +5,7 @@ namespace App\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Models\Producto;
-use App\Repositories\{ProductoRepository, CategoriaRepository, ProveedorRepository, PromocionRepository};
+use App\Repositories\{ProductoRepository, CategoriaRepository, ProveedorRepository};
 use App\Validations\ProductoValidation;
 use Core\{Controller, Log};
 
@@ -14,7 +14,6 @@ class InventarioController extends Controller
     private $productoRepo;
     private $categoriaRepo;
     private $proveedorRepo;
-    private $promoRepo;
 
     public function __construct()
     {
@@ -22,7 +21,6 @@ class InventarioController extends Controller
         $this->productoRepo  = new ProductoRepository();
         $this->categoriaRepo = new CategoriaRepository();
         $this->proveedorRepo = new ProveedorRepository();
-        $this->promoRepo     = new PromocionRepository();
     }
 
     // ── Listado principal ─────────────────────────────────────
@@ -36,11 +34,6 @@ class InventarioController extends Controller
         $categorias       = $this->categoriaRepo->listar();
         $alertas          = $this->productoRepo->alertasStockBajo();
         $alertasCaducidad = $this->productoRepo->alertasCaducidad();
-
-        // Adjuntar promoción vigente a cada producto
-        foreach ($resultado['datos'] as $producto) {
-            $producto->promocion_vigente = $this->promoRepo->obtenerDeProducto($producto->id);
-        }
 
         return $this->render('inventario/index.twig', [
             'title'             => 'Inventario',
