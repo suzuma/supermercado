@@ -3,9 +3,10 @@ namespace App\Repositories;
 
 use App\Helpers\ResponseHelper;
 use App\Models\{Proveedor, OrdenCompra, OrdenCompraDetalle, Producto};
-use App\Services\AuditoriaService;
+use App\Services\{AuditoriaService, CacheService};
 use Core\{Auth, Log};
 use Exception;
+use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Eloquent\Collection;
 
 class ProveedorRepository
@@ -159,38 +160,39 @@ class ProveedorRepository
     {
         $rh = new ResponseHelper();
 
+        $items = json_decode($data['items'], true);
+        if (empty($items)) {
+            return $rh->setResponse(false, 'Agrega al menos un producto a la orden');
+        }
+
         try {
-            $items = json_decode($data['items'], true);
+            Capsule::transaction(function () use ($data, $items, &$rh) {
+                $total = array_sum(array_map(
+                    fn($i) => $i['precio'] * $i['cantidad'],
+                    $items
+                ));
 
-            if (empty($items)) {
-                return $rh->setResponse(false, 'Agrega al menos un producto a la orden');
-            }
+                $orden                = new OrdenCompra();
+                $orden->proveedor_id  = $data['proveedor_id'];
+                $orden->usuario_id    = Auth::getCurrentUser()->id;
+                $orden->total         = round($total, 2);
+                $orden->estado        = 'pendiente';
+                $orden->fecha_entrega = !empty($data['fecha_entrega']) ? $data['fecha_entrega'] : null;
+                $orden->save();
 
-            $total = 0;
-            foreach ($items as $item) {
-                $total += $item['precio'] * $item['cantidad'];
-            }
+                foreach ($items as $item) {
+                    $detalle                  = new OrdenCompraDetalle();
+                    $detalle->orden_id        = $orden->id;
+                    $detalle->producto_id     = $item['id'];
+                    $detalle->cantidad        = $item['cantidad'];
+                    $detalle->precio_unitario = $item['precio'];
+                    $detalle->subtotal        = round($item['precio'] * $item['cantidad'], 2);
+                    $detalle->save();
+                }
 
-            $orden = new OrdenCompra();
-            $orden->proveedor_id   = $data['proveedor_id'];
-            $orden->usuario_id     = Auth::getCurrentUser()->id;
-            $orden->total          = round($total, 2);
-            $orden->estado         = 'pendiente';
-            $orden->fecha_entrega  = !empty($data['fecha_entrega']) ? $data['fecha_entrega'] : null;
-            $orden->save();
-
-            foreach ($items as $item) {
-                $detalle = new OrdenCompraDetalle();
-                $detalle->orden_id        = $orden->id;
-                $detalle->producto_id     = $item['id'];
-                $detalle->cantidad        = $item['cantidad'];
-                $detalle->precio_unitario = $item['precio'];
-                $detalle->subtotal        = round($item['precio'] * $item['cantidad'], 2);
-                $detalle->save();
-            }
-
-            $rh->setResponse(true, 'Orden de compra creada correctamente');
-            $rh->result = ['orden_id' => $orden->id];
+                $rh->setResponse(true, 'Orden de compra creada correctamente');
+                $rh->result = ['orden_id' => $orden->id];
+            });
         } catch (Exception $e) {
             Log::error(ProveedorRepository::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo crear la orden');
@@ -208,33 +210,49 @@ class ProveedorRepository
     {
         $rh = new ResponseHelper();
 
+        $orden = OrdenCompra::with('detalles')->find($id);
+
+        if (!$orden) {
+            return $rh->setResponse(false, 'Orden no encontrada');
+        }
+
+        if ($orden->estado === 'recibida') {
+            return $rh->setResponse(false, 'La orden ya fue recibida');
+        }
+
+        if ($orden->estado === 'cancelada') {
+            return $rh->setResponse(false, 'No se puede modificar una orden cancelada');
+        }
+
         try {
-            $orden = OrdenCompra::with('detalles')->findOrFail($id);
+            Capsule::transaction(function () use ($orden, $estado, &$rh) {
+                if ($estado === 'recibida') {
+                    foreach ($orden->detalles as $detalle) {
+                        Producto::where('id', $detalle->producto_id)
+                            ->increment('stock', $detalle->cantidad);
 
-            if ($orden->estado === 'recibida') {
-                return $rh->setResponse(false, 'La orden ya fue recibida');
-            }
+                        Producto::where('id', $detalle->producto_id)
+                            ->update(['precio_compra' => $detalle->precio_unitario]);
+                    }
 
-            // Si se marca como recibida, actualizar stock de productos
-            if ($estado === 'recibida') {
-                foreach ($orden->detalles as $detalle) {
-                    Producto::where('id', $detalle->producto_id)
-                        ->increment('stock', $detalle->cantidad);
+                    $orden->fecha_recepcion = now();
                 }
-            }
 
-            $orden->estado = $estado;
-            $orden->exists = true;
-            $orden->save();
+                $orden->estado = $estado;
+                $orden->exists = true;
+                $orden->save();
 
-            $rh->setResponse(true, 'Estado actualizado a: ' . ucfirst($estado));
+                CacheService::forget('stock_bajo_count');
+
+                $rh->setResponse(true, 'Estado actualizado a: ' . ucfirst($estado));
+            });
         } catch (Exception $e) {
             Log::error(ProveedorRepository::class, $e->getMessage());
             $rh->setResponse(false, 'No se pudo actualizar el estado');
         }
 
         if ($rh->response) {
-            AuditoriaService::registrar('proveedores', 'estado_orden', "Orden #$id → $estado", $id);
+            AuditoriaService::registrar('proveedores', 'estado_orden', "Orden #{$orden->id} → $estado", $orden->id);
         }
 
         return $rh;

@@ -103,7 +103,8 @@
 {% block scripts %}
 <script>
 $(document).ready(function () {
-    const ordenId = {{ orden.id }};
+    const ordenId   = {{ orden.id }};
+    const nProductos = {{ orden.detalles|length }};
 
     function cambiarEstado(estado, btn) {
         btn.prop('disabled', true);
@@ -111,23 +112,49 @@ $(document).ready(function () {
             url: base_url('proveedores/estadoOrden'), method: 'POST',
             data: { id: ordenId, estado }, dataType: 'json',
             success: function (res) {
-                if (res.response) location.reload();
-                else alert(res.message);
+                if (res.response) {
+                    Swal.fire({ icon: 'success', title: res.message, timer: 1500, showConfirmButton: false })
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire({ icon: 'error', title: res.message });
+                    btn.prop('disabled', false);
+                }
             },
-            complete: function () { btn.prop('disabled', false); }
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error de conexión' });
+                btn.prop('disabled', false);
+            }
         });
     }
 
     $('#btnRecibir').on('click', function () {
-        if (confirm('¿Confirmar recepción? El stock se actualizará automáticamente.')) {
-            cambiarEstado('recibida', $(this));
-        }
+        const btn = $(this);
+        Swal.fire({
+            icon: 'question',
+            title: '¿Confirmar recepción?',
+            html: `Se actualizará el stock y el precio de compra de <strong>${nProductos} producto${nProductos !== 1 ? 's' : ''}</strong>.<br><small class="text-muted">Esta acción no se puede deshacer.</small>`,
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-check mr-1"></i> Sí, recibir',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#28a745',
+        }).then(function (result) {
+            if (result.isConfirmed) cambiarEstado('recibida', btn);
+        });
     });
 
     $('#btnCancelar').on('click', function () {
-        if (confirm('¿Cancelar esta orden de compra?')) {
-            cambiarEstado('cancelada', $(this));
-        }
+        const btn = $(this);
+        Swal.fire({
+            icon: 'warning',
+            title: '¿Cancelar esta orden?',
+            text: 'La orden quedará marcada como cancelada y no podrá modificarse.',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, cancelar orden',
+            cancelButtonText: 'No',
+            confirmButtonColor: '#dc3545',
+        }).then(function (result) {
+            if (result.isConfirmed) cambiarEstado('cancelada', btn);
+        });
     });
 });
 </script>
