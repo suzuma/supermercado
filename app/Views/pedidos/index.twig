@@ -8,36 +8,50 @@
             <h1 class="sz-dash-title">Pedidos en línea</h1>
             <p class="sz-dash-sub">{{ total }} pedido{{ total != 1 ? 's' : '' }} encontrado{{ total != 1 ? 's' : '' }}</p>
         </div>
-    </div>
-
-    {# Filtros por estado #}
-    <div class="sz-filtros animate-in" style="--delay:.05s">
-        <div class="sz-estados-filter">
-            <a href="{{ 'pedidos'|url }}"
-               class="sz-estado-tab {% if not estado %}sz-estado-tab--active{% endif %}">
-                Todos
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ 'pedidos/kanban'|url }}" class="btn btn-outline-secondary">
+                <i class="fas fa-columns mr-1"></i> Vista Kanban
             </a>
-            <a href="{{ 'pedidos'|url }}?estado=pendiente"
-               class="sz-estado-tab sz-estado-tab--pendiente {% if estado == 'pendiente' %}sz-estado-tab--active{% endif %}">
-                <i class="fas fa-clock mr-1"></i> Pendientes
-            </a>
-            <a href="{{ 'pedidos'|url }}?estado=confirmado"
-               class="sz-estado-tab sz-estado-tab--confirmado {% if estado == 'confirmado' %}sz-estado-tab--active{% endif %}">
-                <i class="fas fa-check mr-1"></i> Confirmados
-            </a>
-            <a href="{{ 'pedidos'|url }}?estado=enviado"
-               class="sz-estado-tab sz-estado-tab--enviado {% if estado == 'enviado' %}sz-estado-tab--active{% endif %}">
-                <i class="fas fa-truck mr-1"></i> Enviados
-            </a>
-            <a href="{{ 'pedidos'|url }}?estado=entregado"
-               class="sz-estado-tab sz-estado-tab--entregado {% if estado == 'entregado' %}sz-estado-tab--active{% endif %}">
-                <i class="fas fa-box-open mr-1"></i> Entregados
-            </a>
-            <a href="{{ 'pedidos'|url }}?estado=cancelado"
-               class="sz-estado-tab sz-estado-tab--cancelado {% if estado == 'cancelado' %}sz-estado-tab--active{% endif %}">
-                <i class="fas fa-ban mr-1"></i> Cancelados
+            <a href="{{ 'pedidos/exportar'|url }}{% if estado or fecha_desde or fecha_hasta %}?{% endif %}{{ estado ? 'estado=' ~ estado : '' }}{{ (estado and (fecha_desde or fecha_hasta)) ? '&' : '' }}{{ fecha_desde ? 'fecha_desde=' ~ fecha_desde : '' }}{{ (fecha_desde and fecha_hasta) ? '&' : '' }}{{ fecha_hasta ? 'fecha_hasta=' ~ fecha_hasta : '' }}"
+               class="btn btn-outline-secondary">
+                <i class="fas fa-file-csv mr-1"></i> Exportar CSV
             </a>
         </div>
+    </div>
+
+    {# Filtros #}
+    <div class="sz-filtros animate-in" style="--delay:.05s">
+        <div class="sz-estados-filter">
+            <a href="{{ 'pedidos'|url }}{{ fecha_desde or fecha_hasta ? '?' : '' }}{{ fecha_desde ? 'fecha_desde=' ~ fecha_desde : '' }}{{ (fecha_desde and fecha_hasta) ? '&' : '' }}{{ fecha_hasta ? 'fecha_hasta=' ~ fecha_hasta : '' }}"
+               class="sz-estado-tab {% if not estado %}sz-estado-tab--active{% endif %}">Todos</a>
+            {% for est, icon in {'pendiente': 'clock', 'confirmado': 'check', 'enviado': 'truck', 'entregado': 'box-open', 'cancelado': 'ban'} %}
+            <a href="{{ 'pedidos'|url }}?estado={{ est }}{{ fecha_desde ? '&fecha_desde=' ~ fecha_desde : '' }}{{ fecha_hasta ? '&fecha_hasta=' ~ fecha_hasta : '' }}"
+               class="sz-estado-tab sz-estado-tab--{{ est }} {% if estado == est %}sz-estado-tab--active{% endif %}">
+                <i class="fas fa-{{ icon }} mr-1"></i> {{ est|capitalize }}
+            </a>
+            {% endfor %}
+        </div>
+
+        {# Filtro de fechas #}
+        <form method="GET" action="{{ 'pedidos'|url }}" class="d-flex align-items-center gap-2 mt-2 flex-wrap" id="formFechas">
+            {% if estado %}<input type="hidden" name="estado" value="{{ estado }}">{% endif %}
+            <div class="d-flex align-items-center gap-1">
+                <label class="mb-0 text-muted" style="font-size:.85rem;white-space:nowrap">Desde</label>
+                <input type="date" name="fecha_desde" class="form-control form-control-sm" style="width:150px"
+                       value="{{ fecha_desde ?? '' }}">
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <label class="mb-0 text-muted" style="font-size:.85rem;white-space:nowrap">Hasta</label>
+                <input type="date" name="fecha_hasta" class="form-control form-control-sm" style="width:150px"
+                       value="{{ fecha_hasta ?? '' }}">
+            </div>
+            <button type="submit" class="btn btn-sz btn-sm"><i class="fas fa-filter mr-1"></i> Filtrar</button>
+            {% if fecha_desde or fecha_hasta %}
+            <a href="{{ 'pedidos'|url }}{{ estado ? '?estado=' ~ estado : '' }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-times mr-1"></i> Limpiar fechas
+            </a>
+            {% endif %}
+        </form>
     </div>
 
     {# Tabla de pedidos #}
@@ -53,7 +67,6 @@
                     <tr>
                         <th>Folio</th>
                         <th>Cliente</th>
-                        <th>Dirección</th>
                         <th>Repartidor</th>
                         <th class="text-center">Estado</th>
                         <th class="text-right">Total</th>
@@ -81,28 +94,25 @@
                             {% endif %}
                         </td>
                         <td>
-                            <small class="text-muted">{{ pedido.direccion_entrega|slice(0,40) }}{% if pedido.direccion_entrega|length > 40 %}...{% endif %}</small>
-                        </td>
-                        <td>
                             {% if pedido.usuario %}
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="sz-badge-cat">{{ pedido.usuario.nombre }}</span>
                                     {% if pedido.estado != 'entregado' and pedido.estado != 'cancelado' %}
-                                        <button class="sz-btn-asignar btn btn-sm btn-outline-secondary"
-                                                data-id="{{ pedido.id }}"
-                                                data-toggle="modal" data-target="#modalAsignar"
-                                                title="Cambiar repartidor">
-                                            <i class="fas fa-exchange-alt"></i>
-                                        </button>
+                                    <button class="sz-btn-asignar btn btn-sm btn-outline-secondary"
+                                            data-id="{{ pedido.id }}"
+                                            data-toggle="modal" data-target="#modalAsignar"
+                                            title="Cambiar repartidor">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </button>
                                     {% endif %}
                                 </div>
                             {% else %}
                                 {% if pedido.estado != 'entregado' and pedido.estado != 'cancelado' %}
-                                    <button class="sz-btn-asignar btn btn-sm btn-outline-secondary"
-                                            data-id="{{ pedido.id }}"
-                                            data-toggle="modal" data-target="#modalAsignar">
-                                        <i class="fas fa-user-plus mr-1"></i> Asignar
-                                    </button>
+                                <button class="sz-btn-asignar btn btn-sm btn-outline-secondary"
+                                        data-id="{{ pedido.id }}"
+                                        data-toggle="modal" data-target="#modalAsignar">
+                                    <i class="fas fa-user-plus mr-1"></i> Asignar
+                                </button>
                                 {% endif %}
                             {% endif %}
                         </td>
@@ -115,11 +125,27 @@
                         <td>
                             <small class="text-muted">{{ pedido.created_at|date('d/m/Y H:i') }}</small>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center" style="white-space:nowrap">
                             <a href="{{ ('pedidos/detalle/' ~ pedido.id)|url }}"
                                class="btn btn-sm btn-outline-secondary mr-1" title="Ver detalle">
                                 <i class="fas fa-eye"></i>
                             </a>
+                            {% if pedido.estado == 'pendiente' %}
+                            <button class="btn btn-sm btn-sz btn-avanzar-estado mr-1"
+                                    data-id="{{ pedido.id }}" data-estado="confirmado" title="Confirmar">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            {% elseif pedido.estado == 'confirmado' %}
+                            <button class="btn btn-sm btn-sz btn-avanzar-estado mr-1"
+                                    data-id="{{ pedido.id }}" data-estado="enviado" title="Marcar como enviado">
+                                <i class="fas fa-truck"></i>
+                            </button>
+                            {% elseif pedido.estado == 'enviado' %}
+                            <button class="btn btn-sm btn-sz btn-avanzar-estado mr-1"
+                                    data-id="{{ pedido.id }}" data-estado="entregado" title="Marcar como entregado">
+                                <i class="fas fa-box-open"></i>
+                            </button>
+                            {% endif %}
                             {% if pedido.estado != 'entregado' and pedido.estado != 'cancelado' %}
                             <button class="btn btn-sm btn-outline-danger btn-cancelar-pedido"
                                     data-id="{{ pedido.id }}" title="Cancelar">
@@ -136,20 +162,21 @@
         {# Paginación #}
         {% if total_pages > 1 %}
         <div class="sz-paginacion">
+            {% set qs = (estado ? '&estado=' ~ estado : '') ~ (fecha_desde ? '&fecha_desde=' ~ fecha_desde : '') ~ (fecha_hasta ? '&fecha_hasta=' ~ fecha_hasta : '') %}
             {% if pagina > 1 %}
-            <a href="{{ 'pedidos'|url }}?pagina={{ pagina - 1 }}{% if estado %}&estado={{ estado }}{% endif %}" class="sz-page-btn"><i class="fas fa-chevron-left"></i></a>
+            <a href="{{ 'pedidos'|url }}?pagina={{ pagina - 1 }}{{ qs }}" class="sz-page-btn"><i class="fas fa-chevron-left"></i></a>
             {% endif %}
             {% for i in 1..total_pages %}
                 {% if i == pagina %}
                     <span class="sz-page-btn sz-page-btn--active">{{ i }}</span>
                 {% elseif i == 1 or i == total_pages or (i >= pagina - 2 and i <= pagina + 2) %}
-                    <a href="{{ 'pedidos'|url }}?pagina={{ i }}{% if estado %}&estado={{ estado }}{% endif %}" class="sz-page-btn">{{ i }}</a>
+                    <a href="{{ 'pedidos'|url }}?pagina={{ i }}{{ qs }}" class="sz-page-btn">{{ i }}</a>
                 {% elseif i == pagina - 3 or i == pagina + 3 %}
                     <span class="sz-page-dots">…</span>
                 {% endif %}
             {% endfor %}
             {% if pagina < total_pages %}
-            <a href="{{ 'pedidos'|url }}?pagina={{ pagina + 1 }}{% if estado %}&estado={{ estado }}{% endif %}" class="sz-page-btn"><i class="fas fa-chevron-right"></i></a>
+            <a href="{{ 'pedidos'|url }}?pagina={{ pagina + 1 }}{{ qs }}" class="sz-page-btn"><i class="fas fa-chevron-right"></i></a>
             {% endif %}
         </div>
         {% endif %}
@@ -219,24 +246,41 @@
 <script>
 $(document).ready(function () {
 
+    // Avanzar estado rápido
+    $(document).on('click', '.btn-avanzar-estado', function () {
+        var $btn   = $(this);
+        var id     = $btn.data('id');
+        var estado = $btn.data('estado');
+
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: base_url('pedidos/estado'), method: 'POST',
+            data: { id: id, estado: estado }, dataType: 'json',
+            success: function (res) {
+                if (res.response) location.reload();
+                else { alert(res.message); $btn.prop('disabled', false); }
+            },
+            error: function () { $btn.prop('disabled', false); }
+        });
+    });
+
     // Asignar repartidor
-    let pedidoIdAsignar = null;
+    var pedidoIdAsignar = null;
 
     $(document).on('click', '.sz-btn-asignar', function () {
         pedidoIdAsignar = $(this).data('id');
     });
 
     $('#btnConfirmarAsignar').on('click', function () {
-        const usuarioId = $('#selectRepartidor').val();
+        var usuarioId = $('#selectRepartidor').val();
         if (!usuarioId) { alert('Selecciona un repartidor'); return; }
 
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Asignando...');
 
         $.ajax({
-            url:      base_url('pedidos/asignar'),
-            method:   'POST',
-            data:     { id: pedidoIdAsignar, usuario_id: usuarioId },
-            dataType: 'json',
+            url: base_url('pedidos/asignar'), method: 'POST',
+            data: { id: pedidoIdAsignar, usuario_id: usuarioId }, dataType: 'json',
             success: function (res) {
                 if (res.response) { $('#modalAsignar').modal('hide'); location.reload(); }
                 else alert(res.message);
@@ -249,7 +293,7 @@ $(document).ready(function () {
     });
 
     // Cancelar pedido
-    let pedidoIdCancelar = null;
+    var pedidoIdCancelar = null;
 
     $(document).on('click', '.btn-cancelar-pedido', function () {
         pedidoIdCancelar = $(this).data('id');
@@ -262,10 +306,8 @@ $(document).ready(function () {
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Cancelando...');
 
         $.ajax({
-            url:      base_url('pedidos/cancelar'),
-            method:   'POST',
-            data:     { id: pedidoIdCancelar },
-            dataType: 'json',
+            url: base_url('pedidos/cancelar'), method: 'POST',
+            data: { id: pedidoIdCancelar }, dataType: 'json',
             success: function (res) {
                 if (res.response) { $('#modalCancelarPedido').modal('hide'); location.reload(); }
                 else alert(res.message);

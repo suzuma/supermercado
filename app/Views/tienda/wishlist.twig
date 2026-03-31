@@ -1,0 +1,114 @@
+{% extends 'partials/tienda_layout.twig' %}
+{% block content %}
+<div class="container py-4">
+    <h2 class="sz-section-title">
+        <i class="fas fa-heart mr-2" style="color:#e85d04"></i> Mi lista de deseos
+    </h2>
+
+    {% if productos|length > 0 %}
+    <div class="sz-productos-grid">
+        {% for producto in productos %}
+        <div class="sz-producto-card {% if producto.promo %}sz-producto-card--promo{% endif %}" id="wishcard-{{ producto.id }}">
+            {% if producto.promo %}
+            <div class="sz-tienda-promo-ribbon">{{ producto.promo.descripcion }}</div>
+            {% endif %}
+
+            <a href="{{ ('tienda/producto/' ~ producto.id)|url }}" class="sz-producto-img-wrap">
+                {% if producto.imagen %}
+                    <img src="{{ ('images/productos/' ~ producto.imagen)|public }}"
+                         alt="{{ producto.nombre }}" class="sz-producto-img">
+                {% else %}
+                    <div class="sz-producto-img-placeholder"><i class="fas fa-box fa-2x"></i></div>
+                {% endif %}
+            </a>
+
+            <div class="sz-producto-body">
+                <span class="sz-producto-cat">{{ producto.categoria.nombre }}</span>
+                <a href="{{ ('tienda/producto/' ~ producto.id)|url }}" class="sz-producto-nombre">
+                    {{ producto.nombre }}
+                </a>
+                <div class="sz-producto-footer">
+                    {% if producto.promo and producto.promo.tipo not in ['cantidad_minima', '2x1'] %}
+                        <div class="sz-tienda-precios">
+                            <span class="sz-tienda-precio-original">
+                                {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}
+                            </span>
+                            <span class="sz-tienda-precio-promo">
+                                {{ _cfg.simbolo }}{{ producto.promo.precio_final|number_format(2, '.', ',') }}
+                            </span>
+                        </div>
+                    {% else %}
+                        <span class="sz-producto-precio">
+                            {{ _cfg.simbolo }}{{ producto.precio_venta|number_format(2, '.', ',') }}
+                        </span>
+                    {% endif %}
+
+                    <div class="d-flex gap-1">
+                        <button class="sz-btn-wishlist btn-wishlist-toggle activo"
+                                data-id="{{ producto.id }}"
+                                title="Quitar de lista" aria-label="Quitar de lista de deseos">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                        {% if producto.venta_por_peso %}
+                            <button class="sz-btn-agregar"
+                                    onclick="mostrarModalPesoTienda(
+                                        {{ producto.id }},
+                                        '{{ producto.nombre|replace({"'": "\\'"}) }}',
+                                        {{ producto.precio_venta }},
+                                        {{ producto.promo ? producto.promo|json_encode|raw : 'null' }},
+                                        '{{ producto.unidad_peso }}'
+                                    )" title="Indicar cantidad">
+                                <i class="fas fa-weight"></i>
+                            </button>
+                        {% else %}
+                            <button class="sz-btn-agregar"
+                                    onclick="agregarAlCarritoTienda(
+                                        {{ producto.id }},
+                                        '{{ producto.nombre|replace({"'": "\\'"}) }}',
+                                        {{ producto.precio_venta }},
+                                        {{ producto.promo ? producto.promo|json_encode|raw : 'null' }}
+                                    )">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="far fa-heart fa-3x mb-3" style="color:var(--sz-border)"></i>
+        <p class="text-muted">Tu lista de deseos está vacía</p>
+        <a href="{{ 'tienda/catalogo'|url }}" class="btn btn-sz mt-2">
+            <i class="fas fa-store mr-2"></i> Explorar catálogo
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.sz-btn-wishlist { background:none; border:none; padding:.2rem .35rem; font-size:1.1rem; color:#e85d04; cursor:pointer; line-height:1; transition:transform .15s; }
+.sz-btn-wishlist:hover { transform:scale(1.2); }
+</style>
+<script>
+$(document).on('click', '.btn-wishlist-toggle', function () {
+    var $btn = $(this);
+    var id   = $btn.data('id');
+
+    $.ajax({
+        url: base_url('tienda/wishlist/toggle'), method: 'POST',
+        data: { producto_id: id }, dataType: 'json',
+        success: function (res) {
+            if (res.response && res.result.accion === 'removed') {
+                $('#wishcard-' + id).fadeOut(300, function () { $(this).remove(); });
+                if ($('.sz-producto-card').length === 0) location.reload();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

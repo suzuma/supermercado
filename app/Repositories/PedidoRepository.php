@@ -3,6 +3,7 @@ namespace App\Repositories;
 
 use App\Helpers\{ResponseHelper, MailHelper};
 use App\Models\{Pedido, Producto, Configuracion};
+use App\Services\CacheService;
 use Core\{Auth, Log};
 use Exception;
 use Illuminate\Database\Capsule\Manager as Capsule;
@@ -44,13 +45,19 @@ class PedidoRepository
     }
 
     // ── Listar con paginación y filtros ───────────────────────
-    public function listar(int $pagina = 1, int $limite = 20, ?string $estado = null): array
+    public function listar(int $pagina = 1, int $limite = 20, ?string $estado = null, ?string $fechaDesde = null, ?string $fechaHasta = null): array
     {
         try {
             $query = $this->model->with(['cliente', 'usuario']);
 
             if ($estado) {
                 $query->where('estado', $estado);
+            }
+            if ($fechaDesde) {
+                $query->whereDate('created_at', '>=', $fechaDesde);
+            }
+            if ($fechaHasta) {
+                $query->whereDate('created_at', '<=', $fechaHasta);
             }
 
             $total  = $query->count();
@@ -70,6 +77,50 @@ class PedidoRepository
         } catch (Exception $e) {
             Log::error(PedidoRepository::class, $e->getMessage());
             return ['datos' => collect(), 'total' => 0, 'pagina' => 1, 'total_pages' => 1];
+        }
+    }
+
+    // ── Kanban: pedidos activos agrupados por estado ──────────
+    public function listarPorEstado(): array
+    {
+        try {
+            $pedidos = $this->model
+                ->with(['cliente', 'usuario'])
+                ->whereIn('estado', ['pendiente', 'confirmado', 'enviado'])
+                ->orderByDesc('created_at')
+                ->get();
+
+            $grupos = ['pendiente' => [], 'confirmado' => [], 'enviado' => []];
+            foreach ($pedidos as $pedido) {
+                $grupos[$pedido->estado][] = $pedido;
+            }
+            return $grupos;
+        } catch (Exception $e) {
+            Log::error(PedidoRepository::class, $e->getMessage());
+            return ['pendiente' => [], 'confirmado' => [], 'enviado' => []];
+        }
+    }
+
+    // ── Listar sin paginación para exportar ───────────────────
+    public function listarParaExportar(?string $estado, ?string $fechaDesde, ?string $fechaHasta): \Illuminate\Database\Eloquent\Collection
+    {
+        try {
+            $query = $this->model->with(['cliente', 'usuario']);
+
+            if ($estado) {
+                $query->where('estado', $estado);
+            }
+            if ($fechaDesde) {
+                $query->whereDate('created_at', '>=', $fechaDesde);
+            }
+            if ($fechaHasta) {
+                $query->whereDate('created_at', '<=', $fechaHasta);
+            }
+
+            return $query->orderByDesc('created_at')->get();
+        } catch (Exception $e) {
+            Log::error(PedidoRepository::class, $e->getMessage());
+            return collect();
         }
     }
 
@@ -115,6 +166,7 @@ class PedidoRepository
             $pedido->save();
 
             $rh->setResponse(true, 'Estado actualizado a: ' . ucfirst($estado));
+            CacheService::forget('pedidos_pendientes_count');
 
             // Notificar al cliente por email (solo para estados relevantes)
             if (in_array($estado, ['confirmado', 'enviado', 'entregado', 'cancelado'])) {
@@ -155,6 +207,7 @@ class PedidoRepository
             });
 
             $rh->setResponse(true, 'Tu pedido fue cancelado correctamente');
+            CacheService::forget('pedidos_pendientes_count');
             $this->notificarCliente($pedido->id, 'cancelado');
         } catch (Exception $e) {
             Log::error(PedidoRepository::class, $e->getMessage());

@@ -1,0 +1,234 @@
+{% extends 'partials/tienda_layout.twig' %}
+{% block content %}
+<div class="container py-4">
+    <h2 class="sz-section-title"><i class="fas fa-user-circle mr-2"></i> Mi cuenta</h2>
+
+    {# Estadísticas rápidas #}
+    <div class="row mb-4">
+        <div class="col-6 col-md-3 mb-3">
+            <div class="sz-tienda-card text-center p-3">
+                <div style="font-size:1.6rem;font-weight:700;color:var(--sz-green)">
+                    {{ estadisticas.total_pedidos ?? 0 }}
+                </div>
+                <small class="text-muted">Pedidos online</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="sz-tienda-card text-center p-3">
+                <div style="font-size:1.6rem;font-weight:700;color:var(--sz-green)">
+                    {{ _cfg.simbolo }}{{ (estadisticas.total_gastado ?? 0)|number_format(2, '.', ',') }}
+                </div>
+                <small class="text-muted">Total gastado</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="sz-tienda-card text-center p-3">
+                <div style="font-size:1.6rem;font-weight:700;color:var(--sz-green)">
+                    {{ estadisticas.total_ventas ?? 0 }}
+                </div>
+                <small class="text-muted">Compras en tienda</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="sz-tienda-card text-center p-3">
+                <div style="font-size:.95rem;font-weight:600;color:var(--sz-green)">
+                    {% if estadisticas.ultima_compra %}
+                        {{ estadisticas.ultima_compra|date('d/m/Y') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </div>
+                <small class="text-muted">Última compra</small>
+            </div>
+        </div>
+    </div>
+
+    {# Tabs #}
+    <ul class="nav nav-tabs mb-4" id="cuentaTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="tab-perfil" data-toggle="tab" href="#perfil" role="tab">
+                <i class="fas fa-user mr-1"></i> Perfil
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="tab-password" data-toggle="tab" href="#password" role="tab">
+                <i class="fas fa-lock mr-1"></i> Contraseña
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="tab-pedidos" data-toggle="tab" href="#historial" role="tab">
+                <i class="fas fa-box mr-1"></i> Pedidos
+                {% if pedidos|length > 0 %}
+                <span class="badge badge-secondary ml-1">{{ pedidos|length }}</span>
+                {% endif %}
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        {# Tab Perfil #}
+        <div class="tab-pane fade show active" id="perfil" role="tabpanel">
+            <div class="sz-tienda-card p-4" style="max-width:540px">
+                <form id="formPerfil">
+                    <div class="row">
+                        <div class="col-sm-6 form-group">
+                            <label>Nombre *</label>
+                            <input type="text" class="form-control" name="nombre"
+                                   value="{{ cliente.nombre }}" required maxlength="80">
+                        </div>
+                        <div class="col-sm-6 form-group">
+                            <label>Apellido *</label>
+                            <input type="text" class="form-control" name="apellido"
+                                   value="{{ cliente.apellido }}" required maxlength="80">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Correo electrónico</label>
+                        <input type="email" class="form-control" value="{{ cliente.email }}" disabled>
+                        <small class="text-muted">El correo no se puede cambiar</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-6 form-group">
+                            <label>Teléfono</label>
+                            <input type="text" class="form-control" name="telefono"
+                                   value="{{ cliente.telefono ?? '' }}" maxlength="20" placeholder="000-000-0000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Dirección predeterminada</label>
+                        <textarea class="form-control" name="direccion" rows="2"
+                                  placeholder="Se usará como sugerencia en el checkout">{{ cliente.direccion ?? '' }}</textarea>
+                    </div>
+                    <div id="perfilMsg" class="alert d-none"></div>
+                    <button type="submit" class="btn btn-sz" id="btnGuardarPerfil">
+                        <i class="fas fa-save mr-2"></i> Guardar cambios
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {# Tab Contraseña #}
+        <div class="tab-pane fade" id="password" role="tabpanel">
+            <div class="sz-tienda-card p-4" style="max-width:400px">
+                <form id="formPassword">
+                    <div class="form-group">
+                        <label>Contraseña actual</label>
+                        <input type="password" class="form-control" name="password_actual"
+                               required autocomplete="current-password">
+                    </div>
+                    <div class="form-group">
+                        <label>Nueva contraseña</label>
+                        <input type="password" class="form-control" name="password_nueva"
+                               required minlength="6" placeholder="Mínimo 6 caracteres"
+                               autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmar nueva contraseña</label>
+                        <input type="password" class="form-control" name="password_confirma"
+                               required autocomplete="new-password">
+                    </div>
+                    <div id="passwordMsg" class="alert d-none"></div>
+                    <button type="submit" class="btn btn-sz" id="btnCambiarPassword">
+                        <i class="fas fa-key mr-2"></i> Cambiar contraseña
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {# Tab Historial de pedidos #}
+        <div class="tab-pane fade" id="historial" role="tabpanel">
+            {% if pedidos|length > 0 %}
+            <div class="sz-tienda-card">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Folio</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in pedidos %}
+                            <tr>
+                                <td><code>#{{ p.id|padLeft(5) }}</code></td>
+                                <td style="font-size:.875rem">{{ p.created_at|date('d/m/Y H:i') }}</td>
+                                <td>
+                                    <span class="sz-pedido-estado sz-estado--{{ p.estado }}">
+                                        {{ p.estado|capitalize }}
+                                    </span>
+                                </td>
+                                <td class="text-right font-weight-bold">
+                                    {{ _cfg.simbolo }}{{ p.total|number_format(2, '.', ',') }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="mt-3">
+                <a href="{{ 'tienda/seguimiento'|url }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-search mr-1"></i> Ver detalles y seguimiento
+                </a>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-box-open fa-2x mb-2" style="color:var(--sz-border)"></i>
+                <p class="text-muted mb-0">No tienes pedidos aún</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$('#formPerfil').on('submit', function (e) {
+    e.preventDefault();
+    const $msg = $('#perfilMsg');
+    const $btn = $('#btnGuardarPerfil');
+    $msg.addClass('d-none').removeClass('alert-success alert-danger');
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...');
+
+    $.ajax({
+        url: base_url('tienda/cuenta/actualizar'), method: 'POST',
+        data: $(this).serialize(), dataType: 'json',
+        success: function (res) {
+            $msg.removeClass('d-none').addClass(res.response ? 'alert-success' : 'alert-danger').text(res.message);
+            $btn.prop('disabled', false).html('<i class="fas fa-save mr-2"></i> Guardar cambios');
+        },
+        error: function () {
+            $msg.removeClass('d-none').addClass('alert-danger').text('Error de conexión');
+            $btn.prop('disabled', false).html('<i class="fas fa-save mr-2"></i> Guardar cambios');
+        }
+    });
+});
+
+$('#formPassword').on('submit', function (e) {
+    e.preventDefault();
+    const $msg = $('#passwordMsg');
+    const $btn = $('#btnCambiarPassword');
+    $msg.addClass('d-none').removeClass('alert-success alert-danger');
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Actualizando...');
+
+    $.ajax({
+        url: base_url('tienda/cuenta/password'), method: 'POST',
+        data: $(this).serialize(), dataType: 'json',
+        success: function (res) {
+            $msg.removeClass('d-none').addClass(res.response ? 'alert-success' : 'alert-danger').text(res.message);
+            if (res.response) $('#formPassword')[0].reset();
+            $btn.prop('disabled', false).html('<i class="fas fa-key mr-2"></i> Cambiar contraseña');
+        },
+        error: function () {
+            $msg.removeClass('d-none').addClass('alert-danger').text('Error de conexión');
+            $btn.prop('disabled', false).html('<i class="fas fa-key mr-2"></i> Cambiar contraseña');
+        }
+    });
+});
+</script>
+{% endblock %}

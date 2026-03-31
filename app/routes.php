@@ -36,6 +36,8 @@ $router->group(['before' => 'auth'], function($router){
     $router->post('/ventas/buscarCliente',     ['App\\Controllers\\VentasController', 'postBuscarCliente']);
 
     $router->get('/pedidos',                  ['App\\Controllers\\PedidosController', 'getIndex']);
+    $router->get('/pedidos/kanban',           ['App\\Controllers\\PedidosController', 'getKanban']);
+    $router->get('/pedidos/exportar',         ['App\\Controllers\\PedidosController', 'getExportar']);
     $router->get('/pedidos/detalle/{id}',     ['App\\Controllers\\PedidosController', 'getDetalle']);
     $router->get('/pedidos/orden/{id}',       ['App\\Controllers\\PedidosController', 'getOrden']);
     $router->post('/pedidos/estado',          ['App\\Controllers\\PedidosController', 'postEstado']);
@@ -64,6 +66,10 @@ $router->group(['before' => 'auth'], function($router){
     $router->post('/proveedores/estadoOrden',          ['App\\Controllers\\ProveedoresController', 'postEstadoOrden']);
 
     $router->get('/auditoria',  ['App\\Controllers\\AuditoriaController', 'getIndex']);
+
+    $router->get('/cupones',               ['App\\Controllers\\CuponesController', 'getIndex']);
+    $router->post('/cupones/guardar',      ['App\\Controllers\\CuponesController', 'postGuardar']);
+    $router->post('/cupones/desactivar',   ['App\\Controllers\\CuponesController', 'postDesactivar']);
 
     $router->get('/configuracion',                          ['App\\Controllers\\ConfiguracionController', 'getIndex']);
     $router->post('/configuracion/negocio',                 ['App\\Controllers\\ConfiguracionController', 'postNegocio']);
@@ -101,6 +107,8 @@ $router->get('/tienda/login',              ['App\\Controllers\\TiendaController'
 $router->get('/tienda/logout',              ['App\\Controllers\\TiendaController', 'getLogout']);
 $router->get('/tienda/registro',            ['App\\Controllers\\TiendaController', 'getRegistro']);
 $router->get('/tienda/recuperar',           ['App\\Controllers\\TiendaController', 'getRecuperar']);
+$router->get('/tienda/wishlist',            ['App\\Controllers\\TiendaController', 'getWishlist']);
+$router->get('/tienda/cuenta',              ['App\\Controllers\\TiendaController', 'getCuenta']);
 $router->get('/tienda/nueva-password/{token}', ['App\\Controllers\\TiendaController', 'getNuevaPassword']);
 
 $router->group(['before' => 'csrf'], function($router) {
@@ -110,6 +118,11 @@ $router->group(['before' => 'csrf'], function($router) {
     $router->post('/tienda/recuperar',        ['App\\Controllers\\TiendaController', 'postRecuperar']);
     $router->post('/tienda/nueva-password',   ['App\\Controllers\\TiendaController', 'postNuevaPassword']);
     $router->post('/tienda/cancelar-pedido',  ['App\\Controllers\\TiendaController', 'postCancelarPedido']);
+    $router->post('/tienda/aplicar-cupon',    ['App\\Controllers\\TiendaController', 'postAplicarCupon']);
+    $router->post('/tienda/resena',              ['App\\Controllers\\TiendaController', 'postResena']);
+    $router->post('/tienda/wishlist/toggle',      ['App\\Controllers\\TiendaController', 'postWishlistToggle']);
+    $router->post('/tienda/cuenta/actualizar',    ['App\\Controllers\\TiendaController', 'postActualizarCuenta']);
+    $router->post('/tienda/cuenta/password',      ['App\\Controllers\\TiendaController', 'postCambiarPassword']);
 });
 
 

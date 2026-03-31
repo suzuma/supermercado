@@ -1,0 +1,223 @@
+{% extends "partials/new_layout.twig" %}
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <h1 class="sz-dash-title">Cupones de descuento</h1>
+        <button class="btn btn-sz" data-toggle="modal" data-target="#modalNuevoCupon">
+            <i class="fas fa-plus mr-2"></i> Nuevo cupón
+        </button>
+    </div>
+
+    <div class="sz-card">
+        <div class="table-responsive">
+            <table class="table sz-table mb-0" id="tablaCupones">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Mín. pedido</th>
+                        <th>Usos</th>
+                        <th>Vigencia</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in cupones %}
+                <tr>
+                    <td><code class="sz-codigo">{{ c.codigo }}</code></td>
+                    <td>{{ c.descripcion }}</td>
+                    <td>
+                        {% if c.tipo == 'porcentaje' %}
+                            <span class="badge badge-info">% Porcentaje</span>
+                        {% else %}
+                            <span class="badge badge-secondary">$ Monto fijo</span>
+                        {% endif %}
+                    </td>
+                    <td class="font-weight-bold">
+                        {% if c.tipo == 'porcentaje' %}
+                            {{ c.valor|number_format(0) }}%
+                        {% else %}
+                            {{ _cfg.simbolo }}{{ c.valor|number_format(2, '.', ',') }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.monto_minimo > 0 %}
+                            {{ _cfg.simbolo }}{{ c.monto_minimo|number_format(2, '.', ',') }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ c.usos_actual }}
+                        {% if c.usos_max %}/ {{ c.usos_max }}{% else %}<span class="text-muted">/ ∞</span>{% endif %}
+                    </td>
+                    <td style="font-size:.85rem;">
+                        {% if c.fecha_inicio %}{{ c.fecha_inicio|date('d/m/Y') }}{% else %}<span class="text-muted">—</span>{% endif %}
+                        →
+                        {% if c.fecha_fin %}{{ c.fecha_fin|date('d/m/Y') }}{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if c.activo %}
+                            <span class="badge badge-success">Activo</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.activo %}
+                        <button class="btn btn-sm btn-outline-danger btn-desactivar"
+                                data-id="{{ c.id }}" data-codigo="{{ c.codigo }}">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">No hay cupones registrados</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# Modal nuevo cupón #}
+<div class="modal fade" id="modalNuevoCupon" tabindex="-1" role="dialog" aria-labelledby="modalNuevoCuponLabel" aria-modal="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalNuevoCuponLabel">
+                    <i class="fas fa-ticket-alt mr-2"></i> Nuevo cupón
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formNuevoCupon">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Código *</label>
+                            <input type="text" class="form-control text-uppercase" name="codigo"
+                                   placeholder="VERANO20" maxlength="50" required>
+                            <small class="text-muted">Se convierte a mayúsculas automáticamente</small>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Tipo *</label>
+                            <select class="form-control" name="tipo" id="selectTipo" required>
+                                <option value="porcentaje">Porcentaje (%)</option>
+                                <option value="monto_fijo">Monto fijo ($)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Valor *</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="sufijovalor">%</span>
+                                </div>
+                                <input type="number" class="form-control" name="valor"
+                                       min="0.01" step="0.01" required placeholder="15">
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Monto mínimo de pedido</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">$</span>
+                                </div>
+                                <input type="number" class="form-control" name="monto_minimo"
+                                       min="0" step="0.01" value="0" placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <input type="text" class="form-control" name="descripcion"
+                               placeholder="Descuento de verano 20%" maxlength="150">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label>Límite de usos</label>
+                            <input type="number" class="form-control" name="usos_max"
+                                   min="1" placeholder="Sin límite">
+                            <small class="text-muted">Vacío = sin límite</small>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Válido desde</label>
+                            <input type="date" class="form-control" name="fecha_inicio">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Válido hasta</label>
+                            <input type="date" class="form-control" name="fecha_fin">
+                        </div>
+                    </div>
+                    <div id="formCuponError" class="alert alert-danger d-none"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sz" id="btnGuardarCupon">
+                    <i class="fas fa-save mr-2"></i> Guardar cupón
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$('#selectTipo').on('change', function () {
+    $('#sufijovalor').text($(this).val() === 'porcentaje' ? '%' : '$');
+});
+
+$('input[name="codigo"]').on('input', function () {
+    this.value = this.value.toUpperCase();
+});
+
+$('#btnGuardarCupon').on('click', function () {
+    const $btn = $(this);
+    const $err = $('#formCuponError');
+    $err.addClass('d-none');
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...');
+
+    $.ajax({
+        url: base_url('cupones/guardar'), method: 'POST',
+        data: $('#formNuevoCupon').serialize(), dataType: 'json',
+        success: function (res) {
+            if (res.response) {
+                location.reload();
+            } else {
+                $err.text(res.message).removeClass('d-none');
+                $btn.prop('disabled', false).html('<i class="fas fa-save mr-2"></i> Guardar cupón');
+            }
+        },
+        error: function () {
+            $err.text('Error de conexión').removeClass('d-none');
+            $btn.prop('disabled', false).html('<i class="fas fa-save mr-2"></i> Guardar cupón');
+        }
+    });
+});
+
+$(document).on('click', '.btn-desactivar', function () {
+    const id     = $(this).data('id');
+    const codigo = $(this).data('codigo');
+    if (!confirm('¿Desactivar el cupón ' + codigo + '?')) return;
+
+    $.ajax({
+        url: base_url('cupones/desactivar'), method: 'POST',
+        data: { id: id }, dataType: 'json',
+        success: function (res) { if (res.response) location.reload(); else alert(res.message); },
+        error: function () { alert('Error de conexión'); }
+    });
+});
+</script>
+{% endblock %}

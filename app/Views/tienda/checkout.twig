@@ -33,10 +33,28 @@
                 </div>
                 <div class="p-4">
                     <div id="checkoutItems"></div>
-                    <div class="sz-total-row sz-total-row--grande mt-3">
+
+                    {# Cupón #}
+                    <div class="sz-total-row mt-3" id="rowDescuento" style="display:none;">
+                        <span class="text-success"><i class="fas fa-tag mr-1"></i> Descuento</span>
+                        <span class="text-success font-weight-bold" id="checkoutDescuento">-{{ _cfg.simbolo }}0.00</span>
+                    </div>
+                    <div class="sz-total-row sz-total-row--grande {% if not loop is defined %}mt-2{% endif %}">
                         <span>Total</span>
                         <span id="checkoutTotal">{{ _cfg.simbolo }}0.00</span>
                     </div>
+
+                    <div class="input-group mt-3">
+                        <input type="text" id="inputCupon" class="form-control text-uppercase"
+                               placeholder="Código de cupón" maxlength="50" autocomplete="off">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" id="btnAplicarCupon" type="button">
+                                Aplicar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="cuponMsg" class="mt-1 d-none" style="font-size:.85rem;"></div>
+
                     <button class="btn btn-sz btn-block mt-4" id="btnConfirmarPedido">
                         <i class="fas fa-check mr-2"></i> Confirmar pedido
                     </button>
@@ -51,27 +69,82 @@
 {% block scripts %}
 <script>
 $(document).ready(function () {
-    // Renderizar resumen
-    function renderResumen() {
-        if (!carrito.length) {
-            window.location.href = base_url('tienda/catalogo');
-            return;
+    var subtotal     = 0;
+    var cuponCodigo  = '';
+    var cuponDescuento = 0;
+
+    function calcularSubtotal() {
+        subtotal = 0;
+        carrito.forEach(function (item) { subtotal += item.precio * item.cantidad; });
+        return subtotal;
+    }
+
+    function actualizarTotales() {
+        const totalFinal = Math.max(0, subtotal - cuponDescuento);
+        $('#checkoutTotal').text(_SIMBOLO_ + totalFinal.toLocaleString('es-MX', {minimumFractionDigits: 2}));
+        if (cuponDescuento > 0) {
+            $('#checkoutDescuento').text('-' + _SIMBOLO_ + cuponDescuento.toLocaleString('es-MX', {minimumFractionDigits: 2}));
+            $('#rowDescuento').show();
+        } else {
+            $('#rowDescuento').hide();
         }
+    }
+
+    function renderResumen() {
+        if (!carrito.length) { window.location.href = base_url('tienda/catalogo'); return; }
         let html = '';
-        let total = 0;
-        carrito.forEach(item => {
+        calcularSubtotal();
+        carrito.forEach(function (item) {
             const sub = item.precio * item.cantidad;
-            total += sub;
             html += `<div class="sz-total-row">
                 <span>${item.nombre} x${item.cantidad}</span>
                 <span>${_SIMBOLO_}${sub.toFixed(2)}</span>
             </div>`;
         });
         $('#checkoutItems').html(html);
-        $('#checkoutTotal').text(_SIMBOLO_ + total.toLocaleString('es-MX', {minimumFractionDigits:2}));
+        actualizarTotales();
     }
 
     renderResumen();
+
+    $('#btnAplicarCupon').on('click', function () {
+        const codigo = $('#inputCupon').val().trim().toUpperCase();
+        const $msg   = $('#cuponMsg');
+        if (!codigo) return;
+
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: base_url('tienda/aplicar-cupon'), method: 'POST',
+            data: { codigo: codigo, total: subtotal }, dataType: 'json',
+            success: function (res) {
+                $('#btnAplicarCupon').prop('disabled', false).text('Aplicar');
+                if (res.response) {
+                    cuponCodigo    = codigo;
+                    cuponDescuento = res.result.descuento;
+                    $msg.html('<span class="text-success"><i class="fas fa-check mr-1"></i>' + res.message + '</span>').removeClass('d-none');
+                    $('#inputCupon').prop('disabled', true);
+                    $('#btnAplicarCupon').text('Quitar').off('click').on('click', function () {
+                        cuponCodigo    = '';
+                        cuponDescuento = 0;
+                        $('#inputCupon').val('').prop('disabled', false);
+                        $msg.addClass('d-none');
+                        $(this).text('Aplicar').off('click').on('click', arguments.callee);
+                        actualizarTotales();
+                    });
+                } else {
+                    $msg.html('<span class="text-danger"><i class="fas fa-times mr-1"></i>' + res.message + '</span>').removeClass('d-none');
+                }
+                actualizarTotales();
+            },
+            error: function () {
+                $('#btnAplicarCupon').prop('disabled', false).text('Aplicar');
+                $msg.html('<span class="text-danger">Error de conexión</span>').removeClass('d-none');
+            }
+        });
+    });
+
+    $('#inputCupon').on('input', function () { this.value = this.value.toUpperCase(); });
 
     $('#btnConfirmarPedido').on('click', function () {
         const direccion = $('#checkoutDireccion').val().trim();
@@ -84,8 +157,9 @@ $(document).ready(function () {
         $.ajax({
             url: base_url('tienda/pedido'), method: 'POST',
             data: {
-                items:     JSON.stringify(carrito.map(i => ({ id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad }))),
-                direccion: direccion,
+                items:        JSON.stringify(carrito.map(function (i) { return { id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad }; })),
+                direccion:    direccion,
+                cupon_codigo: cuponCodigo,
             },
             dataType: 'json',
             success: function (res) {

@@ -1,0 +1,267 @@
+{% extends "partials/new_layout.twig" %}
+
+{% block content %}
+<div class="sz-dashboard">
+
+    <div class="sz-dash-header">
+        <div>
+            <h1 class="sz-dash-title">Pedidos — Kanban</h1>
+            <p class="sz-dash-sub">Pedidos activos en tiempo real</p>
+        </div>
+        <a href="{{ 'pedidos'|url }}" class="btn btn-outline-secondary">
+            <i class="fas fa-list mr-1"></i> Vista listado
+        </a>
+    </div>
+
+    <div class="sz-kanban-board">
+
+        {# Columna: Pendientes #}
+        <div class="sz-kanban-col">
+            <div class="sz-kanban-header sz-kanban-header--pendiente">
+                <i class="fas fa-clock mr-2"></i> Pendientes
+                <span class="sz-kanban-count">{{ grupos.pendiente|length }}</span>
+            </div>
+            <div class="sz-kanban-cards">
+                {% for pedido in grupos.pendiente %}
+                {{ _self.tarjeta(pedido, 'confirmado', 'Confirmar', 'check', _cfg) }}
+                {% else %}
+                <div class="sz-kanban-empty">Sin pedidos pendientes</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Columna: Confirmados #}
+        <div class="sz-kanban-col">
+            <div class="sz-kanban-header sz-kanban-header--confirmado">
+                <i class="fas fa-check mr-2"></i> Confirmados
+                <span class="sz-kanban-count">{{ grupos.confirmado|length }}</span>
+            </div>
+            <div class="sz-kanban-cards">
+                {% for pedido in grupos.confirmado %}
+                {{ _self.tarjeta(pedido, 'enviado', 'Marcar enviado', 'truck', _cfg) }}
+                {% else %}
+                <div class="sz-kanban-empty">Sin pedidos confirmados</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Columna: Enviados #}
+        <div class="sz-kanban-col">
+            <div class="sz-kanban-header sz-kanban-header--enviado">
+                <i class="fas fa-truck mr-2"></i> En camino
+                <span class="sz-kanban-count">{{ grupos.enviado|length }}</span>
+            </div>
+            <div class="sz-kanban-cards">
+                {% for pedido in grupos.enviado %}
+                {{ _self.tarjeta(pedido, 'entregado', 'Marcar entregado', 'box-open', _cfg) }}
+                {% else %}
+                <div class="sz-kanban-empty">Sin pedidos en camino</div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{# Modal asignar repartidor #}
+<div class="modal fade" id="modalAsignar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sz-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Asignar repartidor</h5>
+                <button type="button" class="close" data-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mb-0">
+                    <label>Selecciona el repartidor</label>
+                    <select class="form-control" id="selectRepartidor">
+                        <option value="">— Seleccionar —</option>
+                        {% for rep in repartidores %}
+                        <option value="{{ rep.usuario_id }}">{{ rep.usuario.nombre }} {{ rep.usuario.apellido }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sz" id="btnConfirmarAsignar">
+                    <i class="fas fa-user-check mr-1"></i> Asignar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{# Macro para cada tarjeta del kanban #}
+{% macro tarjeta(pedido, siguienteEstado, labelSiguiente, iconSiguiente, cfg) %}
+<div class="sz-kanban-card" id="kcard-{{ pedido.id }}">
+    <div class="sz-kanban-card-header">
+        <code class="sz-codigo">#{{ pedido.id|padLeft(5) }}</code>
+        <small class="text-muted">{{ pedido.created_at|date('d/m H:i') }}</small>
+    </div>
+
+    {% if pedido.cliente %}
+    <div class="sz-kanban-cliente">
+        <i class="fas fa-user sz-info-icon"></i>
+        {{ pedido.cliente.nombre }} {{ pedido.cliente.apellido }}
+    </div>
+    {% if pedido.cliente.telefono %}
+    <div class="sz-kanban-tel">
+        <i class="fas fa-phone sz-info-icon"></i>
+        {{ pedido.cliente.telefono }}
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if pedido.direccion_entrega %}
+    <div class="sz-kanban-dir">
+        <i class="fas fa-map-marker-alt sz-info-icon"></i>
+        {{ pedido.direccion_entrega|slice(0, 60) }}{% if pedido.direccion_entrega|length > 60 %}…{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="sz-kanban-card-footer">
+        <span class="sz-venta-monto">{{ cfg.simbolo }}{{ pedido.total|number_format(2, '.', ',') }}</span>
+        <div class="d-flex gap-1">
+            {% if pedido.usuario %}
+            <span class="sz-badge-cat" title="Repartidor">{{ pedido.usuario.nombre }}</span>
+            {% else %}
+            <button class="btn btn-sm btn-outline-secondary sz-btn-asignar-kanban"
+                    data-id="{{ pedido.id }}"
+                    data-toggle="modal" data-target="#modalAsignar"
+                    title="Asignar repartidor">
+                <i class="fas fa-motorcycle"></i>
+            </button>
+            {% endif %}
+            <a href="{{ ('pedidos/detalle/' ~ pedido.id)|url }}"
+               class="btn btn-sm btn-outline-secondary" title="Ver detalle">
+                <i class="fas fa-eye"></i>
+            </a>
+            <button class="btn btn-sm btn-sz btn-avanzar-kanban"
+                    data-id="{{ pedido.id }}" data-estado="{{ siguienteEstado }}"
+                    title="{{ labelSiguiente }}">
+                <i class="fas fa-{{ iconSiguiente }}"></i>
+            </button>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% block scripts %}
+<style>
+.sz-kanban-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+@media (max-width: 768px) {
+    .sz-kanban-board { grid-template-columns: 1fr; }
+}
+.sz-kanban-col {
+    background: var(--sz-surface);
+    border: 1px solid var(--sz-border);
+    border-radius: var(--sz-radius);
+    overflow: hidden;
+}
+.sz-kanban-header {
+    display: flex;
+    align-items: center;
+    padding: .75rem 1rem;
+    font-weight: 600;
+    font-size: .875rem;
+    border-bottom: 1px solid var(--sz-border);
+}
+.sz-kanban-count {
+    margin-left: auto;
+    background: rgba(0,0,0,.1);
+    border-radius: 999px;
+    padding: .1rem .5rem;
+    font-size: .75rem;
+}
+.sz-kanban-header--pendiente { background: #fff3cd; color: #856404; }
+.sz-kanban-header--confirmado { background: #cfe2ff; color: #084298; }
+.sz-kanban-header--enviado { background: #d1e7dd; color: #0a3622; }
+.sz-kanban-cards { padding: .75rem; display: flex; flex-direction: column; gap: .75rem; min-height: 120px; }
+.sz-kanban-card {
+    background: var(--sz-bg);
+    border: 1px solid var(--sz-border);
+    border-radius: calc(var(--sz-radius) - 2px);
+    padding: .75rem;
+    transition: box-shadow .15s;
+}
+.sz-kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.sz-kanban-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .4rem; }
+.sz-kanban-cliente, .sz-kanban-tel, .sz-kanban-dir {
+    font-size: .82rem;
+    color: var(--sz-text-muted);
+    margin-bottom: .2rem;
+}
+.sz-kanban-cliente { font-weight: 600; color: var(--sz-text); }
+.sz-kanban-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--sz-border); }
+.sz-kanban-empty { text-align: center; padding: 1.5rem; color: var(--sz-text-muted); font-size: .85rem; }
+</style>
+<script>
+$(document).ready(function () {
+
+    // Avanzar estado en kanban
+    $(document).on('click', '.btn-avanzar-kanban', function () {
+        var $btn   = $(this);
+        var id     = $btn.data('id');
+        var estado = $btn.data('estado');
+
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: base_url('pedidos/estado'), method: 'POST',
+            data: { id: id, estado: estado }, dataType: 'json',
+            success: function (res) {
+                if (res.response) {
+                    $('#kcard-' + id).fadeOut(250, function () {
+                        $(this).remove();
+                        // Actualiza los contadores
+                        $('.sz-kanban-col').each(function () {
+                            var count = $(this).find('.sz-kanban-card').length;
+                            $(this).find('.sz-kanban-count').text(count);
+                        });
+                    });
+                } else {
+                    alert(res.message);
+                    $btn.prop('disabled', false).html('<i class="fas fa-' + estado + '"></i>');
+                }
+            },
+            error: function () { $btn.prop('disabled', false); }
+        });
+    });
+
+    // Asignar repartidor en kanban
+    var pedidoIdAsignar = null;
+
+    $(document).on('click', '.sz-btn-asignar-kanban', function () {
+        pedidoIdAsignar = $(this).data('id');
+    });
+
+    $('#btnConfirmarAsignar').on('click', function () {
+        var usuarioId = $('#selectRepartidor').val();
+        if (!usuarioId) { alert('Selecciona un repartidor'); return; }
+
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Asignando...');
+
+        $.ajax({
+            url: base_url('pedidos/asignar'), method: 'POST',
+            data: { id: pedidoIdAsignar, usuario_id: usuarioId }, dataType: 'json',
+            success: function (res) {
+                if (res.response) { $('#modalAsignar').modal('hide'); location.reload(); }
+                else alert(res.message);
+            },
+            complete: function () {
+                $('#btnConfirmarAsignar').prop('disabled', false)
+                    .html('<i class="fas fa-user-check mr-1"></i> Asignar');
+            }
+        });
+    });
+
+});
+</script>
+{% endblock %}

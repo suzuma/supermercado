@@ -7,6 +7,7 @@
 namespace Core;
 
 use App\Models\Configuracion;
+use App\Models\Pedido;
 use App\Models\Producto;
 use App\Services\CacheService;
 
@@ -72,7 +73,18 @@ class Controller {
             ];
         });
 
-        $data['_cfg'] = array_merge($cfg, ['stock_bajo_total' => $stockBajoCount]);
+        $pedidosPendientesCount = CacheService::remember('pedidos_pendientes_count', 60, function () {
+            try {
+                return Pedido::where('estado', 'pendiente')->count();
+            } catch (\Exception $e) {
+                return 0;
+            }
+        });
+
+        $data['_cfg'] = array_merge($cfg, [
+            'stock_bajo_total'        => $stockBajoCount,
+            'pedidos_pendientes_total' => $pedidosPendientesCount,
+        ]);
 
         // Sesión del cliente para la tienda
         $data['cliente_session'] = !empty($_SESSION['cliente_id']) ? (object)[

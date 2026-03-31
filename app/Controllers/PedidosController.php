@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Repositories\{PedidoRepository, EmpleadoRepository};
@@ -17,12 +18,14 @@ class PedidosController extends Controller
     }
 
     // ── Listado ───────────────────────────────────────────────
-    public function getIndex()
+    public function getIndex(): string
     {
-        $pagina = (int)($_GET['pagina'] ?? 1);
-        $estado = $_GET['estado'] ?? null;
+        $pagina     = (int)($_GET['pagina'] ?? 1);
+        $estado     = $_GET['estado']      ?? null;
+        $fechaDesde = $_GET['fecha_desde'] ?? null;
+        $fechaHasta = $_GET['fecha_hasta'] ?? null;
 
-        $resultado    = $this->pedidoRepo->listar($pagina, 20, $estado ?: null);
+        $resultado    = $this->pedidoRepo->listar($pagina, 20, $estado ?: null, $fechaDesde ?: null, $fechaHasta ?: null);
         $repartidores = $this->empleadoRepo->listarRepartidores();
 
         return $this->render('pedidos/index.twig', [
@@ -32,37 +35,89 @@ class PedidosController extends Controller
             'pagina'       => $resultado['pagina'],
             'total_pages'  => $resultado['total_pages'],
             'estado'       => $estado,
+            'fecha_desde'  => $fechaDesde,
+            'fecha_hasta'  => $fechaHasta,
             'repartidores' => $repartidores,
         ]);
     }
 
+    // ── Vista kanban ──────────────────────────────────────────
+    public function getKanban(): string
+    {
+        $grupos       = $this->pedidoRepo->listarPorEstado();
+        $repartidores = $this->empleadoRepo->listarRepartidores();
+
+        return $this->render('pedidos/kanban.twig', [
+            'title'        => 'Pedidos — Kanban',
+            'grupos'       => $grupos,
+            'repartidores' => $repartidores,
+        ]);
+    }
+
+    // ── Exportar CSV ──────────────────────────────────────────
+    public function getExportar(): void
+    {
+        $estado     = $_GET['estado']      ?? null;
+        $fechaDesde = $_GET['fecha_desde'] ?? null;
+        $fechaHasta = $_GET['fecha_hasta'] ?? null;
+
+        $pedidos = $this->pedidoRepo->listarParaExportar($estado ?: null, $fechaDesde ?: null, $fechaHasta ?: null);
+
+        $nombre = 'pedidos_' . date('Ymd_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $nombre . '"');
+        header('Pragma: no-cache');
+
+        $out = fopen('php://output', 'w');
+        fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));  // BOM UTF-8 para Excel
+
+        fputcsv($out, ['Folio', 'Fecha', 'Cliente', 'Email', 'Teléfono', 'Dirección', 'Repartidor', 'Estado', 'Total']);
+
+        foreach ($pedidos as $p) {
+            fputcsv($out, [
+                '#' . str_pad((string)$p->id, 5, '0', STR_PAD_LEFT),
+                $p->created_at->format('d/m/Y H:i'),
+                $p->cliente ? $p->cliente->nombre . ' ' . $p->cliente->apellido : '',
+                $p->cliente->email    ?? '',
+                $p->cliente->telefono ?? '',
+                $p->direccion_entrega ?? '',
+                $p->usuario ? $p->usuario->nombre . ' ' . $p->usuario->apellido : '',
+                $p->estado,
+                number_format((float)$p->total, 2),
+            ]);
+        }
+
+        fclose($out);
+    }
+
     // ── Detalle ───────────────────────────────────────────────
-    public function getDetalle(int $id)
+    public function getDetalle(int $id): string
     {
         $pedido       = $this->pedidoRepo->obtener($id);
         $repartidores = $this->empleadoRepo->listarRepartidores();
 
         return $this->render('pedidos/detalle.twig', [
-            'title'        => 'Pedido #' . str_pad($id, 5, '0', STR_PAD_LEFT),
+            'title'        => 'Pedido #' . str_pad((string)$id, 5, '0', STR_PAD_LEFT),
             'pedido'       => $pedido,
             'repartidores' => $repartidores,
         ]);
     }
 
     // ── Orden de entrega (impresión) ──────────────────────────
-    public function getOrden(int $id)
+    public function getOrden(int $id): string
     {
         $pedido = $this->pedidoRepo->obtener($id);
 
         return $this->render('pedidos/orden.twig', [
-            'title'  => 'Orden de entrega #' . str_pad($id, 5, '0', STR_PAD_LEFT),
+            'title'  => 'Orden de entrega #' . str_pad((string)$id, 5, '0', STR_PAD_LEFT),
             'pedido' => $pedido,
             'menu'   => false,
         ]);
     }
 
     // ── Cambiar estado (Ajax) ─────────────────────────────────
-    public function postEstado()
+    public function postEstado(): void
     {
         $rh     = new \App\Helpers\ResponseHelper();
         $estado = $_POST['estado'] ?? '';
@@ -81,7 +136,7 @@ class PedidosController extends Controller
     }
 
     // ── Asignar repartidor (Ajax) ─────────────────────────────
-    public function postAsignar()
+    public function postAsignar(): void
     {
         $rh = $this->pedidoRepo->asignarRepartidor(
             (int)$_POST['id'],
@@ -91,7 +146,7 @@ class PedidosController extends Controller
     }
 
     // ── Cancelar (Ajax) ───────────────────────────────────────
-    public function postCancelar()
+    public function postCancelar(): void
     {
         $rh = $this->pedidoRepo->cambiarEstado(
             (int)$_POST['id'],

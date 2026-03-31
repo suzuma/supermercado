@@ -1,9 +1,6 @@
 <?php
-/*
-    autor: Noe Cazarez Camargo
-    fecha: 2019-06-24
-    descripcion: CONTROLLER DEL MODULO DE INVENTARIO
-*/
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Helpers\ResponseHelper;

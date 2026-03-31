@@ -90,6 +90,11 @@
             <a href="{{ 'pedidos'|url }}" class="sz-nav-item {% if _route == 'pedidos' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-shopping-bag"></i>
                 <span>Pedidos en línea</span>
+                {% if _cfg.pedidos_pendientes_total > 0 %}
+                <span class="sz-nav-badge" title="{{ _cfg.pedidos_pendientes_total }} pedido{{ _cfg.pedidos_pendientes_total != 1 ? 's' : '' }} pendiente{{ _cfg.pedidos_pendientes_total != 1 ? 's' : '' }}">
+                    {{ _cfg.pedidos_pendientes_total }}
+                </span>
+                {% endif %}
             </a>
         {% endif %}
 
@@ -118,11 +123,15 @@
             </a>
         {% endif %}
 
-        {# Configuración y Auditoría — solo admin #}
+        {# Configuración, Cupones y Auditoría — solo admin #}
         {% if isAdmin() %}
             <a href="{{ 'configuracion'|url }}" class="sz-nav-item {% if _route == 'configuracion' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-cog"></i>
                 <span>Configuración</span>
+            </a>
+            <a href="{{ 'cupones'|url }}" class="sz-nav-item {% if _route == 'cupones' %}sz-nav-item--active{% endif %}">
+                <i class="fas fa-ticket-alt"></i>
+                <span>Cupones</span>
             </a>
             <a href="{{ 'auditoria'|url }}" class="sz-nav-item {% if _route == 'auditoria' %}sz-nav-item--active{% endif %}">
                 <i class="fas fa-clipboard-list"></i>

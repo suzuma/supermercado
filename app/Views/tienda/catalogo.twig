@@ -113,28 +113,35 @@
                                 </span>
                             {% endif %}
 
-                            {% if producto.venta_por_peso %}
-                                <button class="sz-btn-agregar"
-                                        onclick="mostrarModalPesoTienda(
-                                            {{ producto.id }},
-                                            '{{ producto.nombre|replace({"'": "\\'"}) }}',
-                                            {{ producto.precio_venta }},
-                                            {{ producto.promo ? producto.promo|json_encode|raw : 'null' }},
-                                            '{{ producto.unidad_peso }}'
-                                        )" title="Indicar cantidad">
-                                    <i class="fas fa-weight"></i>
+                            <div class="d-flex align-items-center gap-1">
+                                <button class="sz-btn-wishlist btn-wishlist-toggle {% if producto.id in wishlist_ids %}activo{% endif %}"
+                                        data-id="{{ producto.id }}" title="Lista de deseos"
+                                        aria-label="{% if producto.id in wishlist_ids %}Quitar de lista de deseos{% else %}Agregar a lista de deseos{% endif %}">
+                                    <i class="{% if producto.id in wishlist_ids %}fas{% else %}far{% endif %} fa-heart"></i>
                                 </button>
-                            {% else %}
-                                <button class="sz-btn-agregar"
-                                        onclick="agregarAlCarritoTienda(
-                                            {{ producto.id }},
-                                            '{{ producto.nombre|replace({"'": "\\'"}) }}',
-                                            {{ producto.precio_venta }},
-                                            {{ producto.promo ? producto.promo|json_encode|raw : 'null' }}
-                                        )">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            {% endif %}
+                                {% if producto.venta_por_peso %}
+                                    <button class="sz-btn-agregar"
+                                            onclick="mostrarModalPesoTienda(
+                                                {{ producto.id }},
+                                                '{{ producto.nombre|replace({"'": "\\'"}) }}',
+                                                {{ producto.precio_venta }},
+                                                {{ producto.promo ? producto.promo|json_encode|raw : 'null' }},
+                                                '{{ producto.unidad_peso }}'
+                                            )" title="Indicar cantidad">
+                                        <i class="fas fa-weight"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="sz-btn-agregar"
+                                            onclick="agregarAlCarritoTienda(
+                                                {{ producto.id }},
+                                                '{{ producto.nombre|replace({"'": "\\'"}) }}',
+                                                {{ producto.precio_venta }},
+                                                {{ producto.promo ? producto.promo|json_encode|raw : 'null' }}
+                                            )">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -174,4 +181,34 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.sz-btn-wishlist { background:none; border:none; padding:.2rem .35rem; font-size:1.1rem; color:#e85d04; cursor:pointer; line-height:1; transition:transform .15s; }
+.sz-btn-wishlist:hover { transform:scale(1.2); }
+</style>
+<script>
+$(document).on('click', '.btn-wishlist-toggle', function () {
+    var $btn = $(this);
+    var id   = $btn.data('id');
+
+    $.ajax({
+        url: base_url('tienda/wishlist/toggle'), method: 'POST',
+        data: { producto_id: id }, dataType: 'json',
+        success: function (res) {
+            if (!res.response && res.message === 'Debes iniciar sesión') {
+                window.location.href = base_url('tienda/login');
+                return;
+            }
+            if (res.response) {
+                var agregado = res.result.accion === 'added';
+                $btn.find('i').attr('class', agregado ? 'fas fa-heart' : 'far fa-heart');
+                $btn.toggleClass('activo', agregado);
+                $btn.attr('aria-label', agregado ? 'Quitar de lista de deseos' : 'Agregar a lista de deseos');
+            }
+        }
+    });
+});
+</script>
 {% endblock %}
