@@ -44,7 +44,7 @@ class DevolucionesController extends Controller
         }
 
         return $this->render('devoluciones/recibo.twig', [
-            'title'      => 'Recibo de devolución #' . str_pad($id, 5, '0', STR_PAD_LEFT),
+            'title'      => 'Recibo de devolución #' . str_pad((string) $id, 5, '0', STR_PAD_LEFT),
             'devolucion' => $devolucion,
         ]);
     }

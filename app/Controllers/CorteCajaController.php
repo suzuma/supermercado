@@ -49,7 +49,7 @@ class CorteCajaController extends Controller
         $corte = $this->repo->obtener($id);
 
         return $this->render('ventas/corte_detalle.twig', [
-            'title' => 'Corte #' . str_pad($id, 5, '0', STR_PAD_LEFT),
+            'title' => 'Corte #' . str_pad((string) $id, 5, '0', STR_PAD_LEFT),
             'corte' => $corte,
         ]);
     }

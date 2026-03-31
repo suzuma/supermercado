@@ -142,7 +142,7 @@ class ProveedoresController extends Controller
         $orden = $this->repo->obtenerOrden($id);
 
         return $this->render('proveedores/detalle_orden.twig', [
-            'title' => 'Orden #' . str_pad($id, 5, '0', STR_PAD_LEFT),
+            'title' => 'Orden #' . str_pad((string) $id, 5, '0', STR_PAD_LEFT),
             'orden' => $orden,
         ]);
     }
