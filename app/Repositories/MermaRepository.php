@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Helpers\ResponseHelper;
+use Carbon\Carbon;
 use App\Models\{Merma, Producto};
 use App\Services\{AuditoriaService, CacheService};
 use Core\{Auth, Log};
@@ -49,7 +50,7 @@ class MermaRepository
                 $merma->motivo     = $data['motivo'];
                 $merma->notas      = $data['notas'] ?? null;
                 $merma->usuario_id = Auth::getCurrentUser()->id;
-                $merma->created_at = now();
+                $merma->created_at = Carbon::now();
                 $merma->save();
 
                 Producto::where('id', $merma->producto_id)
@@ -133,8 +134,8 @@ class MermaRepository
     public function totalMes(): float
     {
         try {
-            return (float) Merma::whereMonth('created_at', date('m'))
-                ->whereYear('created_at', date('Y'))
+            return (float) Merma::whereMonth('merma.created_at', date('m'))
+                ->whereYear('merma.created_at', date('Y'))
                 ->join('productos', 'merma.producto_id', '=', 'productos.id')
                 ->selectRaw('SUM(merma.cantidad * productos.precio_compra) as total')
                 ->value('total');
