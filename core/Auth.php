@@ -4,48 +4,51 @@ namespace Core;
 class Auth {
     const METHOD = 'aes-256-cbc';
 
-    public static function signIn(array $data) {
-        $time = time() + ( 3600 * ServicesContainer::getConfig()['session-time'] );
+    public static function signIn(array $data): void {
         setcookie(
             ServicesContainer::getConfig()['session-name'],
-            Auth::encryptCookie( serialize($data) ),[
-            'expires' => time() + 86400,
-            'path' => '/',
-            'domain' => 'localhost',
-            'secure' => true,
-            'httponly' => true,
-            'samesite' => 'None',
-        ]);
-
-        /*setcookie(
-            ServicesContainer::getConfig()['session-name'],
-            Auth::encryptCookie( serialize($data) ),
-            $time,
-            '/'
-        );*/
+            self::encryptCookie(json_encode($data)),
+            [
+                'expires'  => time() + 86400,
+                'path'     => '/',
+                'httponly' => true,
+                'samesite' => 'Strict',
+            ]
+        );
     }
 
-    public static function destroy() {
-        if(empty($_COOKIE[ServicesContainer::getConfig()['session-name']])) return;
+    public static function destroy(): void {
+        if (empty($_COOKIE[ServicesContainer::getConfig()['session-name']])) return;
 
-        unset( $_COOKIE[ServicesContainer::getConfig()['session-name']] );
-        setcookie(ServicesContainer::getConfig()['session-name'], null, -1, '/');
+        unset($_COOKIE[ServicesContainer::getConfig()['session-name']]);
+        setcookie(ServicesContainer::getConfig()['session-name'], '', -1, '/');
     }
 
-    public static function getCurrentUser() : \stdClass {
-        if(empty($_COOKIE[ServicesContainer::getConfig()['session-name']])) {
-            throw new \Exception("Auth cookie is not defined");
+    public static function getCurrentUser(): \stdClass {
+        if (empty($_COOKIE[ServicesContainer::getConfig()['session-name']])) {
+            throw new \Exception('Auth cookie is not defined');
         }
 
-        $current = self::decryptCookie($_COOKIE[ServicesContainer::getConfig()['session-name']]);
-        return (object)unserialize($current);
+        $decrypted = self::decryptCookie($_COOKIE[ServicesContainer::getConfig()['session-name']]);
+        $data      = json_decode($decrypted, true);
+
+        if (!is_array($data)) {
+            throw new \Exception('Auth cookie inválida o con formato legacy');
+        }
+
+        return (object)$data;
     }
 
-    public static function isLoggedIn() : bool {
-        if(empty($_COOKIE[ServicesContainer::getConfig()['session-name']])) return false;
+    public static function isLoggedIn(): bool {
+        if (empty($_COOKIE[ServicesContainer::getConfig()['session-name']])) return false;
 
-        $current = self::decryptCookie($_COOKIE[ServicesContainer::getConfig()['session-name']]);
-        return @unserialize($current) === false ? false : true;
+        try {
+            $decrypted = self::decryptCookie($_COOKIE[ServicesContainer::getConfig()['session-name']]);
+            $data      = json_decode($decrypted, true);
+            return is_array($data) && isset($data['id']);
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     private static function encryptCookie(string $value) : string {
