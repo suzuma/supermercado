@@ -199,13 +199,16 @@ class ConfiguracionController extends Controller
     // ── Helper: subir logo ────────────────────────────────────
     private function subirLogo(array $archivo): ?string
     {
-        $permitidos = ['jpg', 'jpeg', 'png', 'webp'];
-        $extension  = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+        $mimesPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+        $extensiones     = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
 
-        if (!in_array($extension, $permitidos)) return null;
         if ($archivo['size'] > 2 * 1024 * 1024) return null;
 
-        $nombre     = 'logo_' . time() . '.' . $extension;
+        $mime = finfo_file(finfo_open(FILEINFO_MIME_TYPE), $archivo['tmp_name']);
+
+        if (!in_array($mime, $mimesPermitidos, true)) return null;
+
+        $nombre     = 'logo_' . time() . '.' . $extensiones[$mime];
         $directorio = _BASE_PATH_ . 'public/images/';
 
         if (move_uploaded_file($archivo['tmp_name'], $directorio . $nombre)) {
