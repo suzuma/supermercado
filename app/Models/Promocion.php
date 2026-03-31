@@ -34,7 +34,7 @@ class Promocion extends Model
     }
 
     // Calcular precio final según tipo de promoción
-    public function calcularPrecio(float $precioOriginal, int $cantidad = 1): array
+    public function calcularPrecio(float $precioOriginal, float $cantidad = 1): array
     {
         $precioFinal  = $precioOriginal;
         $subtotal     = $precioOriginal * $cantidad;
