@@ -227,4 +227,55 @@ class VentaRepository
             return collect();
         }
     }
+
+    public function promedioTicketDia(): float
+    {
+        try {
+            $cantidad = $this->cantidadDia();
+            return $cantidad > 0 ? round($this->totalDia() / $cantidad, 2) : 0.0;
+        } catch (Exception $e) {
+            return 0.0;
+        }
+    }
+
+    public function productoTopDia(): array
+    {
+        try {
+            $row = \Illuminate\Database\Capsule\Manager::table('venta_detalles')
+                ->join('ventas', 'ventas.id', '=', 'venta_detalles.venta_id')
+                ->join('productos', 'productos.id', '=', 'venta_detalles.producto_id')
+                ->where('ventas.estado', 'completada')
+                ->whereDate('ventas.created_at', date('Y-m-d'))
+                ->selectRaw('productos.nombre, SUM(venta_detalles.cantidad) as total_vendido')
+                ->groupBy('venta_detalles.producto_id', 'productos.nombre')
+                ->orderByDesc('total_vendido')
+                ->first();
+
+            return $row ? ['nombre' => $row->nombre, 'cantidad' => (float)$row->total_vendido] : [];
+        } catch (Exception $e) {
+            Log::error(VentaRepository::class, $e->getMessage());
+            return [];
+        }
+    }
+
+    public function cajeroTopDia(): array
+    {
+        try {
+            $row = \Illuminate\Database\Capsule\Manager::table('ventas')
+                ->join('usuarios', 'usuarios.id', '=', 'ventas.usuario_id')
+                ->where('ventas.estado', 'completada')
+                ->whereDate('ventas.created_at', date('Y-m-d'))
+                ->selectRaw('usuarios.nombre, usuarios.apellido, SUM(ventas.total) as total_vendido, COUNT(*) as num_ventas')
+                ->groupBy('ventas.usuario_id', 'usuarios.nombre', 'usuarios.apellido')
+                ->orderByDesc('total_vendido')
+                ->first();
+
+            return $row
+                ? ['nombre' => $row->nombre . ' ' . $row->apellido, 'total' => (float)$row->total_vendido, 'ventas' => (int)$row->num_ventas]
+                : [];
+        } catch (Exception $e) {
+            Log::error(VentaRepository::class, $e->getMessage());
+            return [];
+        }
+    }
 }

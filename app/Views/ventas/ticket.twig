@@ -32,7 +32,6 @@
     <div class="logo">{{ _cfg.negocio_nombre }}</div>
     <div>Sistema de gestión</div>
     <div>Tel: {{ _cfg.negocio_tel }}</div>
-    <div>Tel: (000) 000-0000</div>
 </div>
 
 <div class="sep"></div>
@@ -89,8 +88,11 @@
 </div>
 
 <script>
-    // Auto-imprimir al abrir
-    window.onload = function() { window.print(); }
+    window.onload = function () { window.print(); };
+    window.onafterprint = function () {
+        // Cierra automáticamente si fue abierto como popup
+        if (window.opener) window.close();
+    };
 </script>
 </body>
 </html>

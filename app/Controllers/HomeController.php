@@ -74,6 +74,11 @@ class HomeController extends Controller
             'devoluciones_dia'       => $this->devRepo->totalDia(),
             'total_devoluciones_dia' => $this->devRepo->cantidadDia(),
 
+            // Métricas adicionales
+            'promedio_ticket' => $this->ventaRepo->promedioTicketDia(),
+            'producto_top'    => $this->ventaRepo->productoTopDia(),
+            'cajero_top'      => $this->ventaRepo->cajeroTopDia(),
+
             // Gráfica
             'ventas_labels'        => $ventasSemana['labels'],
             'ventas_datos'         => $ventasSemana['datos'],

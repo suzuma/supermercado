@@ -67,10 +67,10 @@
                         </td>
                         <td class="text-right sz-venta-monto">{{ _cfg.simbolo }}{{ venta.total|number_format(2, '.', ',') }}</td>
                         <td class="text-center">
-                            <a href="{{ ('ventas/ticket/' ~ venta.id)|url }}" target="_blank"
-                               class="btn btn-sm btn-outline-secondary mr-1" title="Ver ticket">
-                                <i class="fas fa-receipt"></i>
-                            </a>
+                            <button onclick="imprimirTicket({{ venta.id }})"
+                                    class="btn btn-sm btn-outline-secondary mr-1" title="Imprimir ticket">
+                                <i class="fas fa-print"></i>
+                            </button>
                             {% if venta.estado == 'completada' %}
                             <button class="btn btn-sm btn-outline-danger btn-cancelar"
                                     data-id="{{ venta.id }}" title="Cancelar venta">

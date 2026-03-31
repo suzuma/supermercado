@@ -68,6 +68,12 @@
     function base_url(url) { return _BASE_URL_ + (url || ''); }
     function redirect(url) { window.location.href = base_url(url); }
 
+    // Abre el ticket en popup pequeño optimizado para impresora térmica
+    function imprimirTicket(ventaId) {
+        const url = base_url('ventas/ticket/' + ventaId);
+        window.open(url, 'ticket_' + ventaId, 'width=380,height=600,toolbar=no,menubar=no,scrollbars=yes,resizable=no');
+    }
+
     // Enviar token CSRF automáticamente en todas las peticiones AJAX
     $.ajaxSetup({
         headers: { 'X-CSRF-Token': $('meta[name="csrf-token"]').attr('content') }

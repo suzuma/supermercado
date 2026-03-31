@@ -28,7 +28,7 @@ Funcionalidades identificadas en el análisis del sistema (2026-03-30), prioriza
 | F1 | **Recepción de órdenes de compra** — al marcar como "recibida", actualizar stock y precio de compra automáticamente | ✅ Listo |
 | F2 | **Caducidades completo** — baja automática de vencidos, descuento por proximidad a vencimiento, reporte de merma | ✅ Listo |
 | F3 | **Programa de puntos / lealtad** — puntos por compra canjeables como descuento | ✅ Listo |
-| F4 | **Vista simplificada para repartidor** — panel mobile-first con solo sus pedidos y botón "entregado" | ⬜ Pendiente |
+| F4 | **Vista simplificada para repartidor** — panel mobile-first con solo sus pedidos y botón "entregado" | ✅ Listo |
 | F5 | **Facturación electrónica (CFDI)** — XML con sello SAT para ventas a empresas | ⬜ Pendiente |
 
 ## P3 — Mejoras de UX y dashboard

@@ -85,6 +85,39 @@
         </div>
         {% endif %}
 
+        {% if (isAdmin() or isSeller()) and promedio_ticket > 0 %}
+        <div class="sz-metric-card animate-in" style="--delay:.23s">
+            <div class="sz-metric-icon" style="background:rgba(52,152,219,.12);color:#2980b9"><i class="fas fa-receipt"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Ticket promedio</span>
+                <span class="sz-metric-value">{{ _cfg.simbolo }}{{ promedio_ticket|number_format(2, '.', ',') }}</span>
+                <span class="sz-metric-sub">hoy</span>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if isAdmin() and producto_top is not empty %}
+        <div class="sz-metric-card animate-in" style="--delay:.26s">
+            <div class="sz-metric-icon" style="background:rgba(230,126,34,.12);color:#e67e22"><i class="fas fa-fire"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Más vendido hoy</span>
+                <span class="sz-metric-value" style="font-size:1rem">{{ producto_top.nombre }}</span>
+                <span class="sz-metric-sub">{{ producto_top.cantidad }} unidades</span>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if isAdmin() and cajero_top is not empty %}
+        <div class="sz-metric-card animate-in" style="--delay:.29s">
+            <div class="sz-metric-icon" style="background:rgba(155,89,182,.12);color:#8e44ad"><i class="fas fa-medal"></i></div>
+            <div class="sz-metric-body">
+                <span class="sz-metric-label">Top cajero hoy</span>
+                <span class="sz-metric-value" style="font-size:1rem">{{ cajero_top.nombre }}</span>
+                <span class="sz-metric-sub">{{ _cfg.simbolo }}{{ cajero_top.total|number_format(2, '.', ',') }} · {{ cajero_top.ventas }} ventas</span>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 
     {# ── Grid principal ───────────────────────────────────── #}

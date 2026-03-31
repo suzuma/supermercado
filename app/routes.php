@@ -206,6 +206,7 @@ $router->get('/tienda/recuperar',             ['App\\Controllers\\TiendaControll
 $router->get('/tienda/wishlist',              ['App\\Controllers\\TiendaController', 'getWishlist']);
 $router->get('/tienda/cuenta',                ['App\\Controllers\\TiendaController', 'getCuenta']);
 $router->get('/tienda/nueva-password/{token}',['App\\Controllers\\TiendaController', 'getNuevaPassword']);
+$router->get('/tienda/colonias',              ['App\\Controllers\\TiendaController', 'getColonias']);
 
 $router->group(['before' => 'csrf'], function ($router) {
     $router->post('/tienda/pedido',            ['App\\Controllers\\TiendaController', 'postPedido']);
