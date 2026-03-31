@@ -5,6 +5,7 @@ use App\Helpers\{ResponseHelper, MailHelper};
 use App\Models\{Pedido, Producto, Configuracion};
 use App\Services\CacheService;
 use Core\{Auth, Log};
+use App\Repositories\PuntosRepository;
 use Exception;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Eloquent\Collection;
@@ -155,15 +156,23 @@ class PedidoRepository
                 return $rh->setResponse(false, 'No se puede modificar un pedido ya entregado');
             }
 
+            $estadoAnterior = $pedido->estado;
             $pedido->estado = $estado;
 
-            // Si se marca como enviado, registrar fecha de entrega estimada
             if ($estado === 'enviado' && !$pedido->fecha_entrega) {
                 $pedido->fecha_entrega = date('Y-m-d H:i:s', strtotime('+2 hours'));
             }
 
             $pedido->exists = true;
             $pedido->save();
+
+            // Acumular puntos al entregar; revertir canje si se cancela después de pendiente
+            $puntosRepo = new PuntosRepository();
+            if ($estado === 'entregado') {
+                $puntosRepo->acumular((int)$pedido->cliente_id, $pedido->id, (float)$pedido->total);
+            } elseif ($estado === 'cancelado' && $pedido->puntos_usados > 0) {
+                $puntosRepo->revertirCanje((int)$pedido->cliente_id, $pedido->id, (int)$pedido->puntos_usados);
+            }
 
             $rh->setResponse(true, 'Estado actualizado a: ' . ucfirst($estado));
             CacheService::forget('pedidos_pendientes_count');

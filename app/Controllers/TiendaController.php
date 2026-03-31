@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\{Categoria, Producto, Pedido, PedidoDetalle, Cliente};
-use App\Repositories\{ProductoRepository, CategoriaRepository, PedidoRepository, PromocionRepository, CuponRepository, ResenaRepository, WishlistRepository, ClienteRepository};
+use App\Repositories\{ProductoRepository, CategoriaRepository, PedidoRepository, PromocionRepository, CuponRepository, ResenaRepository, WishlistRepository, ClienteRepository, PuntosRepository};
 use App\Helpers\{ResponseHelper, MailHelper};
 use App\Models\Configuracion;
 use Core\{Controller, Log};
@@ -191,12 +191,17 @@ class TiendaController extends Controller
             exit;
         }
 
-        $cliente = $this->getClienteActual();
+        $cliente     = $this->getClienteActual();
+        $puntosRepo  = new PuntosRepository();
+        $cfgPuntos   = $puntosRepo->config();
+        $saldoPuntos = $puntosRepo->saldo($cliente->id);
 
         return $this->render('tienda/checkout.twig', [
-            'title'   => 'Finalizar compra',
-            'menu'    => false,
-            'cliente' => $cliente,
+            'title'        => 'Finalizar compra',
+            'menu'         => false,
+            'cliente'      => $cliente,
+            'saldo_puntos' => $saldoPuntos,
+            'cfg_puntos'   => $cfgPuntos,
         ]);
     }
 
@@ -211,9 +216,10 @@ class TiendaController extends Controller
                 return;
             }
 
-            $items       = json_decode($_POST['items'] ?? '[]', true);
-            $direccion   = trim($_POST['direccion'] ?? '');
-            $cuponCodigo = trim($_POST['cupon_codigo'] ?? '');
+            $items         = json_decode($_POST['items'] ?? '[]', true);
+            $direccion     = trim($_POST['direccion'] ?? '');
+            $cuponCodigo   = trim($_POST['cupon_codigo'] ?? '');
+            $puntosACanjear = max(0, (int)($_POST['puntos_canjear'] ?? 0));
 
             if (empty($items) || !is_array($items)) {
                 echo json_encode($rh->setResponse(false, 'El carrito está vacío'));
@@ -304,11 +310,32 @@ class TiendaController extends Controller
                 $cuponData = $cuponRh->result;
             }
 
-            $descuento = $cuponData ? (float)$cuponData['descuento'] : 0.0;
+            // Validar canje de puntos si se solicitó (fuera de transacción — solo lectura)
+            $puntosRepo     = new PuntosRepository();
+            $cfgPuntos      = $puntosRepo->config();
+            $descuentoPuntos = 0.0;
+
+            if ($puntosACanjear > 0) {
+                $clienteActual = $this->getClienteActual();
+                $saldoPuntos   = $puntosRepo->saldo($clienteActual->id);
+
+                if ($puntosACanjear > $saldoPuntos) {
+                    echo json_encode($rh->setResponse(false, 'No tienes suficientes puntos'));
+                    return;
+                }
+                if ($puntosACanjear < $cfgPuntos['minimo_puntos_canje']) {
+                    echo json_encode($rh->setResponse(false, "El mínimo para canjear es {$cfgPuntos['minimo_puntos_canje']} puntos"));
+                    return;
+                }
+
+                $descuentoPuntos = $puntosRepo->valorEnPesos($puntosACanjear);
+            }
+
+            $descuento  = ($cuponData ? (float)$cuponData['descuento'] : 0.0) + $descuentoPuntos;
             $totalFinal = max(0.0, round($total - $descuento, 2));
             $clienteId  = $this->getClienteActual()->id;
 
-            Capsule::transaction(function () use ($items, $total, $totalFinal, $descuento, $cuponData, $direccion, $clienteId, $rh) {
+            Capsule::transaction(function () use ($items, $total, $totalFinal, $descuento, $descuentoPuntos, $puntosACanjear, $cuponData, $direccion, $clienteId, $puntosRepo, $rh) {
                 // Bloquear filas y validar stock antes de cualquier escritura.
                 // lockForUpdate() emite SELECT ... FOR UPDATE, impidiendo que otra
                 // transacción concurrente lea el mismo stock hasta que ésta termine.
@@ -349,9 +376,23 @@ class TiendaController extends Controller
                 $pedido->total             = $totalFinal;
                 $pedido->descuento         = $descuento;
                 $pedido->cupon_id          = $cuponData ? $cuponData['cupon_id'] : null;
+                $pedido->puntos_usados     = $puntosACanjear;
                 $pedido->estado            = 'pendiente';
                 $pedido->direccion_entrega = $direccion;
                 $pedido->save();
+
+                if ($puntosACanjear > 0) {
+                    \App\Models\Cliente::where('id', $clienteId)->decrement('puntos', $puntosACanjear);
+
+                    $tx             = new \App\Models\PuntosTransaccion();
+                    $tx->cliente_id = $clienteId;
+                    $tx->pedido_id  = $pedido->id;
+                    $tx->tipo       = 'canjeado';
+                    $tx->puntos     = -$puntosACanjear;
+                    $tx->descripcion = "Canje en pedido #{$pedido->id} — descuento $" . number_format($descuentoPuntos, 2);
+                    $tx->created_at = date('Y-m-d H:i:s');
+                    $tx->save();
+                }
 
                 foreach ($items as $item) {
                     $detalle                  = new PedidoDetalle();
@@ -589,18 +630,25 @@ class TiendaController extends Controller
             exit;
         }
 
-        $clienteId    = (int)$_SESSION['cliente_id'];
-        $cliente      = $this->getClienteActual();
-        $clienteRepo  = new ClienteRepository();
-        $pedidos      = $clienteRepo->pedidosCliente($clienteId);
-        $estadisticas = $clienteRepo->estadisticas($clienteId);
+        $clienteId      = (int)$_SESSION['cliente_id'];
+        $cliente        = $this->getClienteActual();
+        $clienteRepo    = new ClienteRepository();
+        $puntosRepo     = new PuntosRepository();
+        $pedidos        = $clienteRepo->pedidosCliente($clienteId);
+        $estadisticas   = $clienteRepo->estadisticas($clienteId);
+        $saldoPuntos    = $puntosRepo->saldo($clienteId);
+        $historialPuntos = $puntosRepo->historial($clienteId);
+        $cfgPuntos      = $puntosRepo->config();
 
         return $this->render('tienda/cuenta.twig', [
-            'title'        => 'Mi cuenta',
-            'menu'         => false,
-            'cliente'      => $cliente,
-            'pedidos'      => $pedidos,
-            'estadisticas' => $estadisticas,
+            'title'            => 'Mi cuenta',
+            'menu'             => false,
+            'cliente'          => $cliente,
+            'pedidos'          => $pedidos,
+            'estadisticas'     => $estadisticas,
+            'saldo_puntos'     => $saldoPuntos,
+            'historial_puntos' => $historialPuntos,
+            'cfg_puntos'       => $cfgPuntos,
         ]);
     }
 

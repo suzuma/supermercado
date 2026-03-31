@@ -17,6 +17,11 @@ class Cliente extends Model
         'rfc',
         'password',
         'activo',
+        'puntos',
+    ];
+
+    protected $casts = [
+        'puntos' => 'integer',
     ];
 
     protected $hidden = ['password'];

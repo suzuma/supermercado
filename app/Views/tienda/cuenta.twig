@@ -43,6 +43,17 @@
         </div>
     </div>
 
+    {# Saldo de puntos #}
+    {% if saldo_puntos is defined %}
+    <div class="sz-tienda-card mb-4 p-3 d-flex align-items-center" style="border-left:4px solid #f4a91c">
+        <i class="fas fa-star fa-2x text-warning mr-3"></i>
+        <div>
+            <div style="font-size:1.3rem;font-weight:700">{{ saldo_puntos }} puntos</div>
+            <small class="text-muted">Valor: ${{ (saldo_puntos * cfg_puntos.valor_punto)|number_format(2, '.', ',') }} · Ganas 1 punto por cada ${{ cfg_puntos.puntos_por_peso|number_format(0) }} de compra</small>
+        </div>
+    </div>
+    {% endif %}
+
     {# Tabs #}
     <ul class="nav nav-tabs mb-4" id="cuentaTabs" role="tablist">
         <li class="nav-item">
@@ -63,6 +74,13 @@
                 {% endif %}
             </a>
         </li>
+        {% if historial_puntos is defined and historial_puntos|length > 0 %}
+        <li class="nav-item">
+            <a class="nav-link" id="tab-puntos" data-toggle="tab" href="#puntos" role="tab">
+                <i class="fas fa-star mr-1 text-warning"></i> Puntos
+            </a>
+        </li>
+        {% endif %}
     </ul>
 
     <div class="tab-content">
@@ -181,6 +199,40 @@
             </div>
             {% endif %}
         </div>
+
+        {# Tab Puntos #}
+        {% if historial_puntos is defined and historial_puntos|length > 0 %}
+        <div class="tab-pane fade" id="puntos" role="tabpanel">
+            <div class="sz-tienda-card">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th class="text-center">Tipo</th>
+                            <th class="text-right">Puntos</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in historial_puntos %}
+                        <tr>
+                            <td class="text-muted small">{{ tx.created_at|date('d/m/Y H:i') }}</td>
+                            <td class="text-center">
+                                <span class="badge badge-{{ tx.tipo == 'ganado' ? 'success' : (tx.tipo == 'revertido' ? 'info' : 'warning') }}">
+                                    {{ tx.tipo|capitalize }}
+                                </span>
+                            </td>
+                            <td class="text-right font-weight-bold {{ tx.puntos > 0 ? 'text-success' : 'text-danger' }}">
+                                {{ tx.puntos > 0 ? '+' : '' }}{{ tx.puntos }}
+                            </td>
+                            <td class="text-muted small">{{ tx.descripcion }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
 
     </div>
 </div>

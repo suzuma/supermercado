@@ -11,9 +11,16 @@ class Pedido extends Model
         'cliente_id',
         'usuario_id',
         'total',
+        'descuento',
+        'cupon_id',
+        'puntos_usados',
         'estado',
         'direccion_entrega',
         'fecha_entrega',
+    ];
+
+    protected $casts = [
+        'puntos_usados' => 'integer',
     ];
 
     public function cliente()
