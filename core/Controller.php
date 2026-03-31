@@ -34,7 +34,7 @@ class Controller {
         $this->provider->addFilter(new \Twig\TwigFilter('public', ['App\\Helpers\\UrlHelper', 'public']));
         $this->provider->addFilter(new \Twig\TwigFilter('url', ['App\\Helpers\\UrlHelper', 'base']));
         $this->provider->addFilter(new \Twig\TwigFilter('padLeft', function($input, $zeros = 4){
-            return str_pad($input, $zeros, '0', STR_PAD_LEFT);
+            return str_pad((string) $input, $zeros, '0', STR_PAD_LEFT);
         }));
 
         // Funciones

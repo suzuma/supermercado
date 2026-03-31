@@ -49,7 +49,7 @@ class VentasController extends Controller
     {
         $venta = $this->ventaRepo->obtener($id);
         return $this->render('ventas/ticket.twig', [
-            'title' => 'Ticket #' . str_pad($id, 5, '0', STR_PAD_LEFT),
+            'title' => 'Ticket #' . str_pad((string) $id, 5, '0', STR_PAD_LEFT),
             'venta' => $venta,
             'menu'  => false,
         ]);
