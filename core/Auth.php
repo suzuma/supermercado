@@ -5,12 +5,15 @@ class Auth {
     const METHOD = 'aes-256-cbc';
 
     public static function signIn(array $data): void {
+        $isProduction = ServicesContainer::getConfig()['environment'] === 'prod';
+
         setcookie(
             ServicesContainer::getConfig()['session-name'],
             self::encryptCookie(json_encode($data)),
             [
                 'expires'  => time() + 86400,
                 'path'     => '/',
+                'secure'   => $isProduction,
                 'httponly' => true,
                 'samesite' => 'Strict',
             ]
